@@ -131,14 +131,6 @@ body {
   border-radius: 3px;
 }
 
-.mainboard {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  width: 100%;
-  box-sizing: border-box;
-}
-
 .panel {
   background: var(--bg-glass);
   border: 1px solid var(--border-default);
@@ -636,9 +628,7 @@ body {
 }
 
 .grid {
-  display: grid !important;
-  visibility: visible !important;
-  opacity: 1 !important;
+  display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 16px;
   padding: 4px;
@@ -649,9 +639,8 @@ body {
 }
 
 #grid {
-  display: block !important;
-  visibility: visible !important;
-}
+  display: block;
+  }
 
 #grid:empty {
   display: none;
