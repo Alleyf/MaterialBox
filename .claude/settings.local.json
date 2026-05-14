@@ -37,7 +37,8 @@
       "Bash(python *)",
       "Bash(echo \"test\")",
       "Read(//tmp/**)",
-      "Bash(node *)"
+      "Bash(node *)",
+      "Bash(npm run *)"
     ]
   }
 }
