@@ -22,6 +22,38 @@
 
 ## 项目结构
 
+```mermaid
+graph TD
+    subgraph "用户操作 / UX"
+        A["Dashboard 操作"] --> B("showDashboardToast()")
+        C["Popup 点击保存"] --> D("后台捕捉媒体")
+    end
+
+    subgraph "src/pages/dashboard.js"
+        B -->|调用| E["showToast()"]
+        B -->|获取文案| F["t(state.language, key)"]
+    end
+
+    subgraph "src/background.js"
+        D -->|检查 Tab| G{"Tab 可扫描?"}
+        G -- 否 --> H["提示: captureUnavailable (try-catch)"]
+        G -- 是 --> I{"有媒体素材?"}
+        I -- 否 --> J["提示: captureEmpty"]
+        I -- 是 --> K["保存并提示: captureSuccess"]
+        H --> L["getUiLanguage() / getText()"]
+        J --> L
+        K --> L
+    end
+
+    style A fill:#e3f2fd,stroke:#1565c0,color:#0d47a1
+    style C fill:#e3f2fd,stroke:#1565c0,color:#0d47a1
+    style E fill:#c8e6c9,stroke:#2e7d32,color:#1b5e20
+    style F fill:#c8e6c9,stroke:#2e7d32,color:#1b5e20
+    style L fill:#fff3e0,stroke:#e65100,color:#e65100
+```
+
+
+
 - `manifest.json`: Chrome 可直接加载的扩展清单
 - `manifest.firefox.json`: Firefox 构建产物使用的扩展清单模板
 - `src/background.js`: 后台逻辑、右键菜单、抓取、导出、训练入口
