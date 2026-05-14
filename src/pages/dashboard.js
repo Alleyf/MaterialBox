@@ -169,6 +169,12 @@ function getCategoryCounts() {
   return counts;
 }
 
+function safeQuery(el, selector) {
+  const target = el.querySelector(selector);
+  if (!target) console.warn('safeQuery: element not found:', selector);
+  return target;
+}
+
 function createPreviewUrl(item) {
   return URL.createObjectURL(item.blob);
 }
@@ -1400,7 +1406,7 @@ function renderGrid() {
       </div>
     `;
 
-    card.querySelector(".card-select").addEventListener("change", (event) => {
+    safeQuery(card, ".card-select").addEventListener("change", (event) => {
       if (event.target.checked) {
         state.selectedIds.add(item.id);
       } else {
@@ -1408,19 +1414,19 @@ function renderGrid() {
       }
       renderFilters();
     });
-    card.querySelector(".thumb").addEventListener("click", (event) => {
+    safeQuery(card, ".thumb").addEventListener("click", (event) => {
       if (event.target.closest(".card-select")) {
         return;
       }
       renderPreview(item);
     });
-    card.querySelector(".card-title").addEventListener("click", () => renderPreview(item));
-    card.querySelector('[data-action="preview"]').addEventListener("click", () => renderPreview(item));
-    card.querySelector('[data-action="export"]').addEventListener("click", async () => {
+    safeQuery(card, ".card-title").addEventListener("click", () => renderPreview(item));
+    safeQuery(card, '[data-action="preview"]').addEventListener("click", () => renderPreview(item));
+    safeQuery(card, '[data-action="export"]').addEventListener("click", async () => {
       await exportBlobFromPage(item.blob, buildItemFilename(item));
     });
-    card.querySelector('[data-action="delete"]').addEventListener("click", async () => deleteItem(item.id));
-    card.querySelector(".badge").addEventListener("click", async (event) => {
+    safeQuery(card, '[data-action="delete"]').addEventListener("click", async () => deleteItem(item.id));
+    safeQuery(card, ".badge").addEventListener("click", async (event) => {
       event.stopPropagation();
       const options = getCategoryOptions(state.language);
       const nextIndex = (options.findIndex((option) => option.value === item.category) + 1) % options.length;
