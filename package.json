@@ -7,17 +7,13 @@
     "build": "npm run build:ai && npm run build:export && npm run build:packages",
     "build:ai": "esbuild src/lib/ai-entry.js --bundle --format=esm --platform=browser --target=chrome121,firefox121 --outfile=src/generated/ai.bundle.js",
     "build:export": "esbuild src/lib/export-entry.js --bundle --format=esm --platform=browser --target=chrome121,firefox121 --outfile=src/generated/export.bundle.js",
-    "build:packages": "node scripts/build-browser-packages.mjs",
-    "test": "node --test",
-    "test:smoke:chrome": "node tests/chrome-smoke.mjs",
-    "test:compat:firefox": "npx web-ext lint --source-dir dist/firefox"
+    "build:packages": "node scripts/build-browser-packages.mjs"
   },
   "dependencies": {
     "@mediapipe/tasks-vision": "^0.10.35",
     "@tensorflow-models/mobilenet": "^2.1.1",
     "@tensorflow/tfjs": "^4.22.0",
     "esbuild": "^0.28.0",
-    "jszip": "^3.10.1",
-    "playwright-core": "^1.60.0"
+    "jszip": "^3.10.1"
   }
 }

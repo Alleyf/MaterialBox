@@ -9,6 +9,7 @@ import {
   putMedia,
   putMeta
 } from "./lib/db.js";
+import { uploadSyncArchive, downloadSyncArchive, testSyncConnection } from "./lib/sync.js";
 import { extensionApi, makeDownloadName } from "./lib/utils.js";
 
 const MENU_IDS = {
@@ -95,12 +96,14 @@ function getText(language, key, params = {}) {
       captureUnavailable: "This page cannot be scanned. Try a normal web page instead.",
       captureEmpty: "No supported images or videos were found on this page.",
       captureSuccess: "Saved {count} item(s) to your library",
+      captureSuccessFiltered: "Saved {count} item(s). Filtered {filtered} low-quality item(s).",
       captureFailed: "Save failed. Please try again."
     },
     zh: {
       captureUnavailable: "当前页面无法扫描，请切换到普通网页后再试。",
       captureEmpty: "当前页面没有发现可保存的图片或视频。",
       captureSuccess: "已保存 {count} 个素材到资源库",
+      captureSuccessFiltered: "已保存 {count} 个素材，过滤掉 {filtered} 个低质素材。",
       captureFailed: "保存失败，请稍后重试。"
     }
   };
@@ -114,6 +117,42 @@ async function fetchAsBlob(sourceUrl) {
     throw new Error(`Fetch failed with HTTP ${response.status}`);
   }
   return response.blob();
+}
+
+function looksLikeGarbageUrl(sourceUrl = "") {
+  return /(sprite|spacer|blank|pixel|tracker|beacon|emoji|avatar|favicon|badge|placeholder)/i.test(sourceUrl);
+}
+
+function isUsefulFetchedMedia(payload, blob) {
+  if (payload.type === "image") {
+    if ((payload.width ?? 0) < 120 || (payload.height ?? 0) < 90) {
+      return false;
+    }
+    if ((payload.width ?? 0) * (payload.height ?? 0) < 18000) {
+      return false;
+    }
+    const ratio = (payload.width ?? 1) / Math.max(payload.height ?? 1, 1);
+    if (ratio > 4.8 || ratio < 0.22) {
+      return false;
+    }
+    if (looksLikeGarbageUrl(payload.sourceUrl) && (payload.width ?? 0) <= 320 && (payload.height ?? 0) <= 320) {
+      return false;
+    }
+    if (blob.size < 10_240 && !payload.mimeType?.includes("svg") && !blob.type.includes("svg")) {
+      return false;
+    }
+  }
+
+  if (payload.type === "video") {
+    if ((payload.width ?? 0) < 240 || (payload.height ?? 0) < 135) {
+      return false;
+    }
+    if (blob.size < 65_536) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 async function computeContentHash(blob) {
@@ -159,6 +198,9 @@ async function getRules() {
 
 async function saveMediaFromSource(payload) {
   const blob = payload.blob ?? await fetchAsBlob(payload.sourceUrl);
+  if (!isUsefulFetchedMedia(payload, blob)) {
+    throw new Error("Filtered low quality media");
+  }
   const contentHash = await computeContentHash(blob);
   const duplicate = await getMediaBySourceUrl(payload.sourceUrl) ?? await getMediaByContentHash(contentHash);
   if (duplicate) {
@@ -202,40 +244,23 @@ async function saveMediaFromSource(payload) {
 
 async function saveManyMedia(items) {
   const savedItems = [];
+  let filteredCount = 0;
   for (const item of items) {
     try {
       const saved = await saveMediaFromSource(item);
       savedItems.push(saved);
     } catch (error) {
-      console.warn("MaterialBox save failed", item.sourceUrl, error);
+      if (error.message === "Filtered low quality media") {
+        filteredCount += 1;
+      } else {
+        console.warn("MaterialBox save failed", item.sourceUrl, error);
+      }
     }
   }
-  return savedItems;
-}
-
-async function reclassifyStoredMedia() {
-  const items = await getAllMedia();
-  const rules = await getRules();
-  let count = 0;
-
-  for (const item of items) {
-    const ruleAi = inferCategory(item, rules);
-    const visionAi = await classifyWithVision(item);
-    item.category = visionAi?.label ?? ruleAi.label;
-    item.ai = {
-      ...ruleAi,
-      provider: visionAi?.provider ?? "rules",
-      imagePredictions: visionAi?.predictions ?? [],
-      visionCategory: visionAi?.label ?? null,
-      visionConfidence: visionAi?.confidence ?? null,
-      reclassifiedAt: Date.now()
-    };
-    item.updatedAt = Date.now();
-    await putMedia(item);
-    count += 1;
-  }
-
-  return count;
+  return {
+    savedItems,
+    filteredCount
+  };
 }
 
 async function exportMedia(ids) {
@@ -274,6 +299,51 @@ async function exportMediaAsZip(ids) {
     filename: `materialbox-export-${timestamp}.zip`,
     saveAs: true
   });
+}
+
+async function runSyncUpload(settings) {
+  const items = await getAllMedia();
+  const rules = await getMeta("classificationRules", createEmptyRules());
+  return uploadSyncArchive(settings, {
+    items,
+    rules
+  });
+}
+
+async function runSyncDownload(settings) {
+  const payload = await downloadSyncArchive(settings);
+  let importedCount = 0;
+  for (const item of payload.items) {
+    const duplicate = await getMediaByContentHash(item.contentHash) ?? await getMediaBySourceUrl(item.sourceUrl);
+    if (duplicate) {
+      continue;
+    }
+    const existingById = item.id ? await getMedia(item.id) : null;
+    await putMedia({
+      id: existingById ? crypto.randomUUID() : (item.id || crypto.randomUUID()),
+      blob: item.blob,
+      type: item.type,
+      mimeType: item.mimeType,
+      sourceUrl: item.sourceUrl,
+      pageUrl: item.pageUrl,
+      pageTitle: item.pageTitle,
+      title: item.title,
+      alt: item.alt,
+      width: item.width,
+      height: item.height,
+      category: item.category,
+      ai: item.ai,
+      tags: item.tags ?? [],
+      contentHash: item.contentHash,
+      createdAt: item.createdAt ?? Date.now(),
+      updatedAt: item.updatedAt ?? Date.now()
+    });
+    importedCount += 1;
+  }
+  if (payload.rules) {
+    await putMeta("classificationRules", payload.rules);
+  }
+  return importedCount;
 }
 
 extensionApi.runtime.onInstalled.addListener(() => {
@@ -363,14 +433,17 @@ extensionApi.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({ ok: false, error: getText(language, "captureEmpty") });
         return;
       }
-      const saved = await saveManyMedia(deduped);
+      const { savedItems, filteredCount } = await saveManyMedia(deduped);
+      const successMessage = filteredCount
+        ? getText(language, "captureSuccessFiltered", { count: savedItems.length, filtered: filteredCount })
+        : getText(language, "captureSuccess", { count: savedItems.length });
       await showSaveToast(tabId, {
         title: "MaterialBox",
-        message: getText(language, "captureSuccess", { count: saved.length }),
+        message: successMessage,
         tone: "success"
       });
-      await notify(getText(language, "captureSuccess", { count: saved.length }));
-      sendResponse({ ok: true, count: saved.length });
+      await notify(successMessage);
+      sendResponse({ ok: true, count: savedItems.length, filtered: filteredCount });
       return;
     }
 
@@ -446,9 +519,21 @@ extensionApi.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return;
     }
 
-    if (message.type === "RECLASSIFY_ALL_MEDIA") {
-      const count = await reclassifyStoredMedia();
+    if (message.type === "SYNC_UPLOAD") {
+      const count = await runSyncUpload(message.settings);
       sendResponse({ ok: true, count });
+      return;
+    }
+
+    if (message.type === "SYNC_DOWNLOAD") {
+      const count = await runSyncDownload(message.settings);
+      sendResponse({ ok: true, count });
+      return;
+    }
+
+    if (message.type === "SYNC_TEST") {
+      await testSyncConnection(message.settings);
+      sendResponse({ ok: true });
       return;
     }
 

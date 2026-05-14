@@ -15,8 +15,44 @@ const state = {
   aiStatus: null,
   selectedIds: new Set(),
   exportDirectoryHandle: null,
-  exportDirectoryName: ""
+  exportDirectoryName: "",
+  syncSettings: createDefaultSyncSettings()
 };
+
+function createDefaultSyncSettings() {
+  return {
+    provider: "none",
+    s3: {
+      endpoint: "",
+      bucket: "",
+      region: "us-east-1",
+      accessKeyId: "",
+      secretAccessKey: "",
+      prefix: "materialbox"
+    },
+    webdav: {
+      url: "",
+      username: "",
+      password: "",
+      path: "materialbox"
+    }
+  };
+}
+
+function mergeSyncSettings(value = {}) {
+  const defaults = createDefaultSyncSettings();
+  return {
+    provider: value.provider ?? defaults.provider,
+    s3: {
+      ...defaults.s3,
+      ...(value.s3 ?? {})
+    },
+    webdav: {
+      ...defaults.webdav,
+      ...(value.webdav ?? {})
+    }
+  };
+}
 
 function matchesFilters(item) {
   const needle = state.search.trim().toLowerCase();
@@ -248,16 +284,24 @@ async function processImageVariant(item, options) {
   let sourceX = 0;
   let sourceY = 0;
 
+  const editorState = options.editorState ?? { zoom: 1, focalX: 0.5, focalY: 0.5 };
+  const zoom = Math.max(1, Number(editorState.zoom) || 1);
+
   if (aspectRatio) {
     const currentRatio = bitmap.width / bitmap.height;
     if (currentRatio > aspectRatio) {
       sourceWidth = bitmap.height * aspectRatio;
-      sourceX = (bitmap.width - sourceWidth) / 2;
     } else {
       sourceHeight = bitmap.width / aspectRatio;
-      sourceY = (bitmap.height - sourceHeight) / 2;
     }
   }
+
+  sourceWidth /= zoom;
+  sourceHeight /= zoom;
+  sourceX = (Number(editorState.focalX) || 0.5) * bitmap.width - sourceWidth / 2;
+  sourceY = (Number(editorState.focalY) || 0.5) * bitmap.height - sourceHeight / 2;
+  sourceX = Math.max(0, Math.min(sourceX, bitmap.width - sourceWidth));
+  sourceY = Math.max(0, Math.min(sourceY, bitmap.height - sourceHeight));
 
   const targetWidth = Math.min(Number(options.maxWidth) || sourceWidth, sourceWidth);
   const targetHeight = Math.round((sourceHeight / sourceWidth) * targetWidth);
@@ -385,6 +429,28 @@ function renderFilters() {
   document.getElementById("export-directory-title").textContent = t(state.language, "exportDirectory");
   document.getElementById("workspace-tools-title").textContent = t(state.language, "workspaceTools");
   document.getElementById("workspace-tools-copy").textContent = t(state.language, "workspaceToolsCopy");
+  document.getElementById("sync-open-btn").textContent = t(state.language, "syncPanel");
+  document.getElementById("sync-panel-title").textContent = t(state.language, "syncPanel");
+  document.getElementById("sync-panel-copy").textContent = t(state.language, "syncPanelCopy");
+  document.getElementById("sync-panel-hint").textContent = t(state.language, "syncProviderHint");
+  document.getElementById("sync-provider-label").textContent = t(state.language, "syncProvider");
+  document.querySelector('#sync-provider-select option[value="none"]').textContent = t(state.language, "syncNone");
+  document.querySelector('#sync-provider-select option[value="s3"]').textContent = t(state.language, "syncS3");
+  document.querySelector('#sync-provider-select option[value="webdav"]').textContent = t(state.language, "syncWebdav");
+  document.getElementById("sync-s3-endpoint-label").textContent = t(state.language, "s3Endpoint");
+  document.getElementById("sync-s3-bucket-label").textContent = t(state.language, "s3Bucket");
+  document.getElementById("sync-s3-region-label").textContent = t(state.language, "s3Region");
+  document.getElementById("sync-s3-access-label").textContent = t(state.language, "s3AccessKey");
+  document.getElementById("sync-s3-secret-label").textContent = t(state.language, "s3SecretKey");
+  document.getElementById("sync-s3-prefix-label").textContent = t(state.language, "s3Prefix");
+  document.getElementById("sync-webdav-url-label").textContent = t(state.language, "webdavUrl");
+  document.getElementById("sync-webdav-user-label").textContent = t(state.language, "webdavUser");
+  document.getElementById("sync-webdav-pass-label").textContent = t(state.language, "webdavPass");
+  document.getElementById("sync-webdav-path-label").textContent = t(state.language, "webdavPath");
+  document.getElementById("sync-save-btn").textContent = t(state.language, "syncSave");
+  document.getElementById("sync-test-btn").textContent = t(state.language, "syncTest");
+  document.getElementById("sync-upload-btn").textContent = t(state.language, "syncUpload");
+  document.getElementById("sync-download-btn").textContent = t(state.language, "syncDownload");
   document.getElementById("studio-panel-title").textContent = t(state.language, "studioPanel");
   document.getElementById("studio-panel-copy").textContent = t(state.language, "studioPanelCopy");
   document.getElementById("studio-panel-hint").textContent = t(state.language, "studioPanelHint");
@@ -412,6 +478,23 @@ function renderFilters() {
     )
   ].join("");
   categoryFilter.value = state.category;
+}
+
+function renderSyncSettings() {
+  const { provider, s3, webdav } = state.syncSettings;
+  document.getElementById("sync-provider-select").value = provider;
+  document.getElementById("sync-s3-endpoint").value = s3.endpoint ?? "";
+  document.getElementById("sync-s3-bucket").value = s3.bucket ?? "";
+  document.getElementById("sync-s3-region").value = s3.region ?? "";
+  document.getElementById("sync-s3-access").value = s3.accessKeyId ?? "";
+  document.getElementById("sync-s3-secret").value = s3.secretAccessKey ?? "";
+  document.getElementById("sync-s3-prefix").value = s3.prefix ?? "";
+  document.getElementById("sync-webdav-url").value = webdav.url ?? "";
+  document.getElementById("sync-webdav-user").value = webdav.username ?? "";
+  document.getElementById("sync-webdav-pass").value = webdav.password ?? "";
+  document.getElementById("sync-webdav-path").value = webdav.path ?? "";
+  document.getElementById("sync-s3-fields").hidden = provider !== "s3";
+  document.getElementById("sync-webdav-fields").hidden = provider !== "webdav";
 }
 
 function renderCategoryChips() {
@@ -504,6 +587,13 @@ function renderPreview(item) {
       <h3>${t(state.language, "imageStudio")}</h3>
       <p>${t(state.language, "previewToolsCopy")}</p>
       <div class="studio-form">
+        <div class="studio-preview-card">
+          <span class="studio-preview-label">${t(state.language, "cropEditor")}</span>
+          <div id="image-editor-stage" class="image-editor-stage">
+            <img id="image-editor-image" src="${previewUrl}" alt="" />
+          </div>
+          <span class="studio-note">${t(state.language, "dragCropHint")}</span>
+        </div>
         <label>
           ${t(state.language, "cropPreset")}
           <select id="image-aspect">
@@ -528,6 +618,10 @@ function renderPreview(item) {
         <label>
           ${t(state.language, "qualityLabel")}
           <input id="image-quality" type="range" min="0.4" max="0.98" step="0.02" value="0.82" />
+        </label>
+        <label>
+          ${t(state.language, "zoomLabel")}
+          <input id="image-zoom" type="range" min="1" max="4" step="0.01" value="1" />
         </label>
         <div class="studio-preview-card">
           <span class="studio-preview-label">${t(state.language, "processedPreview")}</span>
@@ -643,19 +737,65 @@ function renderPreview(item) {
     let previewRequest = 0;
     let processedImageUrl = null;
     let processedImage = null;
+    let previewTimer = null;
     const imageInputs = [
       document.getElementById("image-aspect"),
       document.getElementById("image-format"),
       document.getElementById("image-max-width"),
-      document.getElementById("image-quality")
+      document.getElementById("image-quality"),
+      document.getElementById("image-zoom")
     ];
+    const editorStage = document.getElementById("image-editor-stage");
+    const editorImage = document.getElementById("image-editor-image");
+    const imageEditorState = {
+      zoom: 1,
+      focalX: 0.5,
+      focalY: 0.5,
+      displayWidth: 0,
+      displayHeight: 0
+    };
 
     const getImageOptions = () => ({
       aspectRatio: document.getElementById("image-aspect").value,
       format: document.getElementById("image-format").value,
       maxWidth: document.getElementById("image-max-width").value,
-      quality: Number(document.getElementById("image-quality").value)
+      quality: Number(document.getElementById("image-quality").value),
+      editorState: imageEditorState
     });
+
+    const clampEditorFocal = () => {
+      imageEditorState.focalX = Math.max(0, Math.min(imageEditorState.focalX, 1));
+      imageEditorState.focalY = Math.max(0, Math.min(imageEditorState.focalY, 1));
+    };
+
+    const syncImageEditorView = () => {
+      const sourceWidth = editorImage.naturalWidth || item.width || 1;
+      const sourceHeight = editorImage.naturalHeight || item.height || 1;
+      const aspectRatio = parseAspectRatio(document.getElementById("image-aspect").value) ?? (sourceWidth / sourceHeight);
+      editorStage.style.aspectRatio = String(aspectRatio);
+      const stageWidth = editorStage.clientWidth || 320;
+      const stageHeight = editorStage.clientHeight || Math.max(220, Math.round(stageWidth / aspectRatio));
+      const baseScale = Math.max(stageWidth / sourceWidth, stageHeight / sourceHeight);
+      const zoom = Math.max(1, Number(document.getElementById("image-zoom").value) || 1);
+      imageEditorState.zoom = zoom;
+      const displayWidth = sourceWidth * baseScale * zoom;
+      const displayHeight = sourceHeight * baseScale * zoom;
+      imageEditorState.displayWidth = displayWidth;
+      imageEditorState.displayHeight = displayHeight;
+      clampEditorFocal();
+
+      let left = stageWidth / 2 - imageEditorState.focalX * displayWidth;
+      let top = stageHeight / 2 - imageEditorState.focalY * displayHeight;
+      const minLeft = Math.min(0, stageWidth - displayWidth);
+      const minTop = Math.min(0, stageHeight - displayHeight);
+      left = Math.min(0, Math.max(minLeft, left));
+      top = Math.min(0, Math.max(minTop, top));
+
+      editorImage.style.width = `${displayWidth}px`;
+      editorImage.style.height = `${displayHeight}px`;
+      editorImage.style.left = `${left}px`;
+      editorImage.style.top = `${top}px`;
+    };
 
     const refreshImagePreview = async () => {
       const requestId = ++previewRequest;
@@ -673,16 +813,82 @@ function renderPreview(item) {
       setFeedback("");
     };
 
+    const scheduleImagePreviewRefresh = () => {
+      clearTimeout(previewTimer);
+      previewTimer = setTimeout(() => {
+        void refreshImagePreview();
+      }, 90);
+    };
+
     for (const input of imageInputs) {
       input.addEventListener("input", () => {
-        void refreshImagePreview();
+        syncImageEditorView();
+        scheduleImagePreviewRefresh();
       });
       input.addEventListener("change", () => {
-        void refreshImagePreview();
+        syncImageEditorView();
+        scheduleImagePreviewRefresh();
       });
     }
 
-    void refreshImagePreview();
+    editorImage.addEventListener("load", () => {
+      syncImageEditorView();
+      void refreshImagePreview();
+    }, { once: true });
+
+    let dragPointerId = null;
+    let lastPointerX = 0;
+    let lastPointerY = 0;
+
+    editorStage.addEventListener("pointerdown", (event) => {
+      dragPointerId = event.pointerId;
+      lastPointerX = event.clientX;
+      lastPointerY = event.clientY;
+      editorStage.classList.add("is-dragging");
+      editorStage.setPointerCapture(event.pointerId);
+    });
+
+    editorStage.addEventListener("pointermove", (event) => {
+      if (dragPointerId !== event.pointerId) {
+        return;
+      }
+      const deltaX = event.clientX - lastPointerX;
+      const deltaY = event.clientY - lastPointerY;
+      lastPointerX = event.clientX;
+      lastPointerY = event.clientY;
+      imageEditorState.focalX -= deltaX / Math.max(imageEditorState.displayWidth, 1);
+      imageEditorState.focalY -= deltaY / Math.max(imageEditorState.displayHeight, 1);
+      clampEditorFocal();
+      syncImageEditorView();
+      scheduleImagePreviewRefresh();
+    });
+
+    const endDrag = (event) => {
+      if (dragPointerId !== event.pointerId) {
+        return;
+      }
+      editorStage.classList.remove("is-dragging");
+      editorStage.releasePointerCapture(event.pointerId);
+      dragPointerId = null;
+    };
+
+    editorStage.addEventListener("pointerup", endDrag);
+    editorStage.addEventListener("pointercancel", endDrag);
+
+    editorStage.addEventListener("wheel", (event) => {
+      event.preventDefault();
+      const zoomInput = document.getElementById("image-zoom");
+      const currentZoom = Number(zoomInput.value) || 1;
+      const nextZoom = Math.max(1, Math.min(4, currentZoom + (event.deltaY > 0 ? -0.08 : 0.08)));
+      zoomInput.value = nextZoom.toFixed(2);
+      syncImageEditorView();
+      scheduleImagePreviewRefresh();
+    }, { passive: false });
+
+    if (editorImage.complete) {
+      syncImageEditorView();
+      void refreshImagePreview();
+    }
 
     document.getElementById("image-export-btn").addEventListener("click", async () => {
       setFeedback(t(state.language, "studioSaving"));
@@ -697,6 +903,7 @@ function renderPreview(item) {
     });
 
     dialog.addEventListener("close", () => {
+      clearTimeout(previewTimer);
       if (processedImageUrl) {
         URL.revokeObjectURL(processedImageUrl);
       }
@@ -799,14 +1006,6 @@ async function deleteSelectedItems() {
   await loadData();
 }
 
-async function exportViaBackground(ids) {
-  if (ids.length <= 1) {
-    await extensionApi.runtime.sendMessage({ type: "EXPORT_MEDIA", ids });
-  } else {
-    await extensionApi.runtime.sendMessage({ type: "EXPORT_MEDIA_ZIP", ids });
-  }
-}
-
 async function chooseExportDirectory() {
   if (!("showDirectoryPicker" in window)) {
     setFeedback(t(state.language, "directoryUnsupported"));
@@ -835,6 +1034,75 @@ async function clearExportDirectory() {
   renderDirectorySummary();
   setFeedback(t(state.language, "directoryCleared"));
   showDashboardToast(t(state.language, "directoryCleared"), "info");
+}
+
+function readSyncSettingsFromForm() {
+  return mergeSyncSettings({
+    provider: document.getElementById("sync-provider-select").value,
+    s3: {
+      endpoint: document.getElementById("sync-s3-endpoint").value.trim(),
+      bucket: document.getElementById("sync-s3-bucket").value.trim(),
+      region: document.getElementById("sync-s3-region").value.trim() || "us-east-1",
+      accessKeyId: document.getElementById("sync-s3-access").value.trim(),
+      secretAccessKey: document.getElementById("sync-s3-secret").value.trim(),
+      prefix: document.getElementById("sync-s3-prefix").value.trim() || "materialbox"
+    },
+    webdav: {
+      url: document.getElementById("sync-webdav-url").value.trim(),
+      username: document.getElementById("sync-webdav-user").value.trim(),
+      password: document.getElementById("sync-webdav-pass").value.trim(),
+      path: document.getElementById("sync-webdav-path").value.trim() || "materialbox"
+    }
+  });
+}
+
+async function saveSyncSettings() {
+  state.syncSettings = readSyncSettingsFromForm();
+  await putMeta("cloudSyncSettings", state.syncSettings);
+  renderSyncSettings();
+  showDashboardToast(t(state.language, "syncSaved"));
+}
+
+async function runSyncAction(action) {
+  state.syncSettings = readSyncSettingsFromForm();
+  if (state.syncSettings.provider === "none") {
+    showDashboardToast(t(state.language, "syncMissingProvider"), "error", 3200);
+    return;
+  }
+  await putMeta("cloudSyncSettings", state.syncSettings);
+  setFeedback(t(state.language, "studioSaving"));
+  const result = await extensionApi.runtime.sendMessage({
+    type: action === "upload" ? "SYNC_UPLOAD" : "SYNC_DOWNLOAD",
+    settings: state.syncSettings
+  });
+  if (!result?.ok) {
+    throw new Error(result?.error || t(state.language, "saveFailed"));
+  }
+  const message = action === "upload"
+    ? t(state.language, "syncUploadDone", { count: result.count ?? 0 })
+    : t(state.language, "syncDownloadDone", { count: result.count ?? 0 });
+  setFeedback(message);
+  showDashboardToast(message);
+  if (action === "download") {
+    await loadData();
+  }
+}
+
+async function runSyncTest() {
+  state.syncSettings = readSyncSettingsFromForm();
+  if (state.syncSettings.provider === "none") {
+    showDashboardToast(t(state.language, "syncMissingProvider"), "error", 3200);
+    return;
+  }
+  await putMeta("cloudSyncSettings", state.syncSettings);
+  const result = await extensionApi.runtime.sendMessage({
+    type: "SYNC_TEST",
+    settings: state.syncSettings
+  });
+  if (!result?.ok) {
+    throw new Error(result?.error || t(state.language, "saveFailed"));
+  }
+  showDashboardToast(t(state.language, "syncTestDone"));
 }
 
 async function reclassifyAllItems() {
@@ -940,11 +1208,7 @@ function renderGrid() {
     card.querySelector(".title").addEventListener("click", () => renderPreview(item));
     card.querySelector('[data-action="preview"]').addEventListener("click", () => renderPreview(item));
     card.querySelector('[data-action="export"]').addEventListener("click", async () => {
-      if (item.type === "image" || item.type === "video") {
-        await exportBlobFromPage(item.blob, buildItemFilename(item));
-      } else {
-        await exportViaBackground([item.id]);
-      }
+      await exportBlobFromPage(item.blob, buildItemFilename(item));
     });
     card.querySelector('[data-action="delete"]').addEventListener("click", async () => deleteItem(item.id));
     card.querySelector(".badge").addEventListener("click", async (event) => {
@@ -1013,19 +1277,22 @@ async function importFiles(fileList) {
 }
 
 async function loadData() {
-  const [items, rulesSummary, aiStatus, exportDirectoryHandle, exportDirectoryName] = await Promise.all([
+  const [items, rulesSummary, aiStatus, exportDirectoryHandle, exportDirectoryName, cloudSyncSettings] = await Promise.all([
     getAllMedia(),
     extensionApi.runtime.sendMessage({ type: "GET_RULES_SUMMARY" }),
     extensionApi.runtime.sendMessage({ type: "GET_AI_STATUS" }).catch(() => ({ ok: false })),
     getMeta("exportDirectoryHandle", null),
-    getMeta("exportDirectoryName", "")
+    getMeta("exportDirectoryName", ""),
+    getMeta("cloudSyncSettings", createDefaultSyncSettings())
   ]);
   state.items = items;
   state.rulesSummary = rulesSummary.ok ? rulesSummary : { categories: [], tokenCount: 0 };
   state.aiStatus = aiStatus.ok ? aiStatus : null;
   state.exportDirectoryHandle = exportDirectoryHandle;
   state.exportDirectoryName = exportDirectoryName;
+  state.syncSettings = mergeSyncSettings(cloudSyncSettings);
   renderFilters();
+  renderSyncSettings();
   renderGrid();
   renderDirectorySummary();
   document.getElementById("model-provider").textContent = state.aiStatus
@@ -1057,6 +1324,7 @@ async function bindEvents() {
     state.language = event.target.value;
     await setLanguage(state.language);
     renderFilters();
+    renderSyncSettings();
     renderGrid();
     renderDirectorySummary();
   });
@@ -1097,6 +1365,54 @@ async function bindEvents() {
     await clearExportDirectory();
   });
 
+  document.getElementById("sync-open-btn").addEventListener("click", () => {
+    document.getElementById("sync-dialog").showModal();
+  });
+
+  document.getElementById("sync-close-btn").addEventListener("click", () => {
+    document.getElementById("sync-dialog").close();
+  });
+
+  document.getElementById("sync-provider-select").addEventListener("change", () => {
+    state.syncSettings = readSyncSettingsFromForm();
+    renderSyncSettings();
+  });
+
+  document.getElementById("sync-save-btn").addEventListener("click", async () => {
+    try {
+      await saveSyncSettings();
+    } catch (error) {
+      showDashboardToast(error.message || t(state.language, "saveFailed"), "error", 3200);
+    }
+  });
+
+  document.getElementById("sync-upload-btn").addEventListener("click", async () => {
+    try {
+      await runSyncAction("upload");
+    } catch (error) {
+      showDashboardToast(error.message || t(state.language, "saveFailed"), "error", 3200);
+      setFeedback(error.message || t(state.language, "saveFailed"));
+    }
+  });
+
+  document.getElementById("sync-download-btn").addEventListener("click", async () => {
+    try {
+      await runSyncAction("download");
+    } catch (error) {
+      showDashboardToast(error.message || t(state.language, "saveFailed"), "error", 3200);
+      setFeedback(error.message || t(state.language, "saveFailed"));
+    }
+  });
+
+  document.getElementById("sync-test-btn").addEventListener("click", async () => {
+    try {
+      await runSyncTest();
+    } catch (error) {
+      showDashboardToast(error.message || t(state.language, "saveFailed"), "error", 3200);
+      setFeedback(error.message || t(state.language, "saveFailed"));
+    }
+  });
+
   document.getElementById("smart-classify-btn").addEventListener("click", async () => {
     await reclassifyAllItems();
   });
@@ -1118,6 +1434,12 @@ async function bindEvents() {
   });
 
   document.getElementById("preview-dialog").addEventListener("click", (event) => {
+    if (event.target.nodeName === "DIALOG") {
+      event.target.close();
+    }
+  });
+
+  document.getElementById("sync-dialog").addEventListener("click", (event) => {
     if (event.target.nodeName === "DIALOG") {
       event.target.close();
     }

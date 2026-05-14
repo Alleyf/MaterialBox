@@ -189,6 +189,26 @@ h1 {
   gap: 10px;
 }
 
+.sync-form,
+.sync-fields {
+  display: grid;
+  gap: 10px;
+}
+
+.sync-form label,
+.sync-fields label {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.sync-actions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
 .hero {
   display: grid;
   gap: 18px;
@@ -569,6 +589,28 @@ button.danger {
   background: rgba(0, 0, 0, 0.56);
 }
 
+.sync-dialog {
+  width: min(760px, 94vw);
+}
+
+.sync-sheet {
+  padding: 24px;
+  background: linear-gradient(180deg, #0f1622, #09111b);
+}
+
+.sync-sheet-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: start;
+  margin-bottom: 18px;
+}
+
+.sync-sheet-head h2 {
+  margin: 4px 0 0;
+  font-size: 26px;
+}
+
 .studio {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) 360px;
@@ -700,6 +742,46 @@ button.danger {
   background: #050910;
 }
 
+.image-editor-stage {
+  position: relative;
+  width: 100%;
+  min-height: 220px;
+  overflow: hidden;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background:
+    linear-gradient(45deg, rgba(255, 255, 255, 0.04) 25%, transparent 25%, transparent 75%, rgba(255, 255, 255, 0.04) 75%),
+    linear-gradient(45deg, rgba(255, 255, 255, 0.04) 25%, transparent 25%, transparent 75%, rgba(255, 255, 255, 0.04) 75%),
+    #050910;
+  background-size: 18px 18px;
+  background-position: 0 0, 9px 9px;
+  touch-action: none;
+  user-select: none;
+  cursor: grab;
+}
+
+.image-editor-stage.is-dragging {
+  cursor: grabbing;
+}
+
+.image-editor-stage img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  max-width: none;
+  pointer-events: none;
+  will-change: width, height, left, top;
+}
+
+.image-editor-stage::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  pointer-events: none;
+}
+
 .trim-bar {
   position: relative;
   height: 12px;
@@ -803,10 +885,15 @@ input[type="range"] {
   }
 
   .hero-strip,
+  .sync-actions,
   .studio-actions,
   .studio-form .inline,
   .thumb-actions {
     grid-template-columns: 1fr;
+  }
+
+  .sync-sheet {
+    padding: 18px;
   }
 
   .card-footer {

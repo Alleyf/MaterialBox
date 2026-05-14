@@ -46,7 +46,9 @@ async function main() {
       }
       showToast({
         title: "MaterialBox",
-        message: t(language, "saveSuccess", { count: result.count }),
+        message: result.filtered
+          ? t(language, "saveSuccessFiltered", { count: result.count, filtered: result.filtered })
+          : t(language, "saveSuccess", { count: result.count }),
         tone: "success",
         duration: 2600
       });

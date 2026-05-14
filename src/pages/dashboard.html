@@ -73,6 +73,7 @@
               <input id="search" type="search" />
             </div>
             <div class="hero-actions">
+              <button id="sync-open-btn" class="ghost"></button>
               <select id="language-select">
                 <option value="en">English</option>
                 <option value="zh">中文</option>
@@ -130,6 +131,49 @@
 
     <dialog id="preview-dialog" class="dialog">
       <article id="preview-content"></article>
+    </dialog>
+
+    <dialog id="sync-dialog" class="dialog sync-dialog">
+      <article class="sync-sheet">
+        <header class="sync-sheet-head">
+          <div>
+            <p id="sync-panel-copy" class="studio-kicker">S3 and WebDAV</p>
+            <h2 id="sync-panel-title">Cloud sync</h2>
+            <p id="sync-panel-hint" class="status-copy"></p>
+          </div>
+          <button id="sync-close-btn" class="ghost studio-close" aria-label="Close">×</button>
+        </header>
+        <div class="sync-form">
+          <label>
+            <span id="sync-provider-label"></span>
+            <select id="sync-provider-select">
+              <option value="none"></option>
+              <option value="s3"></option>
+              <option value="webdav"></option>
+            </select>
+          </label>
+          <div id="sync-s3-fields" class="sync-fields" hidden>
+            <label><span id="sync-s3-endpoint-label"></span><input id="sync-s3-endpoint" type="url" placeholder="https://s3.us-east-1.amazonaws.com" /></label>
+            <label><span id="sync-s3-bucket-label"></span><input id="sync-s3-bucket" type="text" /></label>
+            <label><span id="sync-s3-region-label"></span><input id="sync-s3-region" type="text" placeholder="us-east-1" /></label>
+            <label><span id="sync-s3-access-label"></span><input id="sync-s3-access" type="text" autocomplete="off" /></label>
+            <label><span id="sync-s3-secret-label"></span><input id="sync-s3-secret" type="password" autocomplete="off" /></label>
+            <label><span id="sync-s3-prefix-label"></span><input id="sync-s3-prefix" type="text" placeholder="materialbox" /></label>
+          </div>
+          <div id="sync-webdav-fields" class="sync-fields" hidden>
+            <label><span id="sync-webdav-url-label"></span><input id="sync-webdav-url" type="url" placeholder="https://example.com/dav/" /></label>
+            <label><span id="sync-webdav-user-label"></span><input id="sync-webdav-user" type="text" autocomplete="off" /></label>
+            <label><span id="sync-webdav-pass-label"></span><input id="sync-webdav-pass" type="password" autocomplete="off" /></label>
+            <label><span id="sync-webdav-path-label"></span><input id="sync-webdav-path" type="text" placeholder="materialbox" /></label>
+          </div>
+          <div class="sync-actions">
+            <button id="sync-save-btn" class="ghost"></button>
+            <button id="sync-test-btn" class="ghost"></button>
+            <button id="sync-upload-btn" class="primary"></button>
+            <button id="sync-download-btn" class="ghost"></button>
+          </div>
+        </div>
+      </article>
     </dialog>
 
     <script type="module" src="./dashboard.js"></script>

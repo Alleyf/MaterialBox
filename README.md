@@ -22,15 +22,14 @@
 
 ## 项目结构
 
-- `manifest.json`: Chrome 侧扩展清单
-- `manifest.firefox.json`: Firefox 侧扩展清单模板
+- `manifest.json`: Chrome 可直接加载的扩展清单
+- `manifest.firefox.json`: Firefox 构建产物使用的扩展清单模板
 - `src/background.js`: 后台逻辑、右键菜单、抓取、导出、训练入口
 - `src/content-script.js`: 页面媒体扫描与提取
 - `src/lib/`: 数据存储、分类器、i18n 和通用工具
 - `src/pages/`: popup 与素材库页面
 - `_locales/`: 多语言文案
 - `scripts/build-browser-packages.mjs`: 浏览器打包脚本
-- `tests/`: 单元测试与简单烟雾测试
 
 ## 环境要求
 
@@ -47,15 +46,11 @@ npm install
 
 ```bash
 npm run build
-npm test
 ```
 
 脚本说明：
 
 - `npm run build`: 构建 AI bundle、导出 bundle，并生成 `dist/chrome` 与 `dist/firefox`
-- `npm test`: 运行 Node 内置测试
-- `npm run test:smoke:chrome`: 运行 Chrome 冒烟测试
-- `npm run test:compat:firefox`: 对 Firefox 构建产物执行 `web-ext lint`
 
 说明：
 
@@ -69,7 +64,7 @@ npm test
 1. 打开 `chrome://extensions/`
 2. 开启开发者模式
 3. 选择“加载已解压的扩展程序”
-4. 选择项目根目录，或在构建后选择 `dist/chrome`
+4. 选择项目根目录，或构建后选择 `dist/chrome`
 
 ### Firefox
 
@@ -77,7 +72,7 @@ npm test
 2. 选择“临时载入附加组件”
 3. 选择项目根目录中的 `manifest.json`，或构建后使用 `dist/firefox/manifest.json`
 
-说明：项目兼容 Chrome 与 Firefox 的后台脚本机制，构建流程会分别生成对应产物。
+说明：项目根目录默认以 Chrome 加载为主；Firefox 请使用构建后的 `dist/firefox/manifest.json`。
 
 ## 开发建议
 
