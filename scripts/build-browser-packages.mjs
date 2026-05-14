@@ -5,7 +5,7 @@ const root = process.cwd();
 const distRoot = path.join(root, "dist");
 const browserDirs = {
   chrome: {
-    manifestPath: path.join(root, "manifest.json")
+    manifestPath: path.join(root, "manifest.chrome.json")
   },
   firefox: {
     manifestPath: path.join(root, "manifest.firefox.json")

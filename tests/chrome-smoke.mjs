@@ -281,6 +281,9 @@ try {
   await popup.goto(`chrome-extension://${extensionId}/src/pages/popup.html`, { waitUntil: "domcontentloaded" });
   await popup.waitForSelector("#open-library");
   assert.ok((await popup.locator("#ai-status").textContent())?.trim().length > 0);
+  await fixturePage.bringToFront();
+  await popup.locator("#save-page").click();
+  await popup.waitForSelector(".materialbox-toast.is-visible");
 
   console.log("Chrome smoke passed");
 } finally {

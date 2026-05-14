@@ -1,5 +1,4 @@
 const extensionApi = globalThis.browser ?? globalThis.chrome;
-let toastHost = null;
 let classifierModulePromise = null;
 let toastModulePromise = null;
 

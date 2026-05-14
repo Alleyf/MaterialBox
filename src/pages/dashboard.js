@@ -2,6 +2,7 @@ import { getAllMedia, getMeta, putMedia, putMeta } from "../lib/db.js";
 import { inferCategory } from "../lib/classifier.js";
 import { getCategoryOptions, getLanguage, setLanguage, t } from "../lib/i18n.js";
 import { classifyImageBlobInPage } from "../lib/page-classifier.js";
+import { showToast } from "../lib/toast.js";
 import { extensionApi, formatBytes, formatDate } from "../lib/utils.js";
 
 const state = {
@@ -64,6 +65,15 @@ function setFeedback(message = "") {
   document.getElementById("feedback").textContent = message;
 }
 
+function showDashboardToast(message, tone = "success", duration = 2600) {
+  showToast({
+    title: "MaterialBox",
+    message,
+    tone,
+    duration
+  });
+}
+
 function safeName(value) {
   return String(value ?? "material")
     .replace(/[<>:"/\\|?*\u0000-\u001f]+/g, "-")
@@ -122,6 +132,7 @@ async function exportBlobFromPage(blob, filename) {
   if (state.exportDirectoryHandle && await ensureDirectoryPermission(state.exportDirectoryHandle)) {
     await writeFileToDirectory(state.exportDirectoryHandle, filename, blob);
     setFeedback(t(state.language, "savedToFolder", { name: state.exportDirectoryName }));
+    showDashboardToast(t(state.language, "savedToFolder", { name: state.exportDirectoryName }));
     return true;
   }
 
@@ -133,12 +144,14 @@ async function exportBlobFromPage(blob, filename) {
     const writable = await handle.createWritable();
     await writable.write(blob);
     await writable.close();
-    setFeedback(`Saved ${filename}`);
+    setFeedback(t(state.language, "savedFile", { name: filename }));
+    showDashboardToast(t(state.language, "savedFile", { name: filename }));
     return true;
   }
 
   downloadBlobFallback(blob, filename);
-  setFeedback(`Downloaded ${filename}`);
+  setFeedback(t(state.language, "downloadedFile", { name: filename }));
+  showDashboardToast(t(state.language, "downloadedFile", { name: filename }));
   return true;
 }
 
@@ -214,7 +227,9 @@ async function saveDerivedItem(blob, baseItem, suffix, mimeType, mediaType = bas
 
   await putMedia(newItem);
   await loadData();
-  setFeedback(`${suffix} saved to library`);
+  const message = t(state.language, "derivedSaved", { suffix });
+  setFeedback(message);
+  showDashboardToast(message);
 }
 
 function parseAspectRatio(value) {
@@ -618,7 +633,9 @@ function renderPreview(item) {
   document.getElementById("manual-category-btn").addEventListener("click", async () => {
     const category = document.getElementById("manual-category-select").value;
     await updateCategory(item.id, category);
-    setFeedback(t(state.language, "categoryUpdated", { category: t(state.language, category) }));
+    const message = t(state.language, "categoryUpdated", { category: t(state.language, category) });
+    setFeedback(message);
+    showDashboardToast(message);
     dialog.close();
   });
 
@@ -805,7 +822,9 @@ async function chooseExportDirectory() {
   await putMeta("exportDirectoryHandle", handle);
   await putMeta("exportDirectoryName", handle.name);
   renderDirectorySummary();
-  setFeedback(t(state.language, "directorySet", { name: handle.name }));
+  const message = t(state.language, "directorySet", { name: handle.name });
+  setFeedback(message);
+  showDashboardToast(message);
 }
 
 async function clearExportDirectory() {
@@ -815,6 +834,7 @@ async function clearExportDirectory() {
   await putMeta("exportDirectoryName", "");
   renderDirectorySummary();
   setFeedback(t(state.language, "directoryCleared"));
+  showDashboardToast(t(state.language, "directoryCleared"), "info");
 }
 
 async function reclassifyAllItems() {
@@ -839,7 +859,9 @@ async function reclassifyAllItems() {
     count += 1;
   }
   await loadData();
-  setFeedback(t(state.language, "reclassifyDone", { count }));
+  const message = t(state.language, "reclassifyDone", { count });
+  setFeedback(message);
+  showDashboardToast(message);
 }
 
 function renderGrid() {
@@ -985,7 +1007,9 @@ async function importFiles(fileList) {
     count += 1;
   }
   await loadData();
-  setFeedback(t(state.language, "importDone", { count }));
+  const message = t(state.language, "importDone", { count });
+  setFeedback(message);
+  showDashboardToast(message);
 }
 
 async function loadData() {
@@ -1062,6 +1086,7 @@ async function bindEvents() {
       `materialbox-export-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.zip`
     );
     setFeedback(t(state.language, "zipDone"));
+    showDashboardToast(t(state.language, "zipDone"));
   });
 
   document.getElementById("choose-directory-btn").addEventListener("click", async () => {

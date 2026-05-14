@@ -85,6 +85,29 @@ async function ensureMenus() {
   }
 }
 
+function getUiLanguage() {
+  return (extensionApi.i18n?.getUILanguage?.() ?? "en").toLowerCase().startsWith("zh") ? "zh" : "en";
+}
+
+function getText(language, key, params = {}) {
+  const dictionary = {
+    en: {
+      captureUnavailable: "This page cannot be scanned. Try a normal web page instead.",
+      captureEmpty: "No supported images or videos were found on this page.",
+      captureSuccess: "Saved {count} item(s) to your library",
+      captureFailed: "Save failed. Please try again."
+    },
+    zh: {
+      captureUnavailable: "当前页面无法扫描，请切换到普通网页后再试。",
+      captureEmpty: "当前页面没有发现可保存的图片或视频。",
+      captureSuccess: "已保存 {count} 个素材到资源库",
+      captureFailed: "保存失败，请稍后重试。"
+    }
+  };
+  const template = dictionary[language]?.[key] ?? dictionary.en[key] ?? key;
+  return template.replace(/\{(\w+)\}/g, (_, token) => String(params[token] ?? ""));
+}
+
 async function fetchAsBlob(sourceUrl) {
   const response = await fetch(sourceUrl);
   if (!response.ok) {
@@ -315,22 +338,38 @@ extensionApi.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 
     if (message.type === "CAPTURE_ACTIVE_TAB_MEDIA") {
-      const [tab] = await extensionApi.tabs.query({ active: true, currentWindow: true });
-      if (!tab?.id) {
+      const language = getUiLanguage();
+      const tabId = message.tabId ?? (await extensionApi.tabs.query({ active: true, lastFocusedWindow: true }))[0]?.id;
+      if (!tabId) {
         sendResponse({ ok: false, error: "No active tab" });
         return;
       }
-      const collected = await extensionApi.tabs.sendMessage(tab.id, { type: "COLLECT_PAGE_MEDIA" });
+      let collected;
+      try {
+        collected = await extensionApi.tabs.sendMessage(tabId, { type: "COLLECT_PAGE_MEDIA" });
+      } catch (error) {
+        sendResponse({ ok: false, error: getText(language, "captureUnavailable") });
+        return;
+      }
       const deduped = [...new Map(
         (collected ?? []).map((item) => [item.sourceUrl, item])
       ).values()].slice(0, 30);
+      if (!deduped.length) {
+        await showSaveToast(tabId, {
+          title: "MaterialBox",
+          message: getText(language, "captureEmpty"),
+          tone: "info"
+        });
+        sendResponse({ ok: false, error: getText(language, "captureEmpty") });
+        return;
+      }
       const saved = await saveManyMedia(deduped);
-      await showSaveToast(tab.id, {
+      await showSaveToast(tabId, {
         title: "MaterialBox",
-        message: `Saved ${saved.length} item(s) to your library`,
+        message: getText(language, "captureSuccess", { count: saved.length }),
         tone: "success"
       });
-      await notify(`Saved ${saved.length} media item(s)`);
+      await notify(getText(language, "captureSuccess", { count: saved.length }));
       sendResponse({ ok: true, count: saved.length });
       return;
     }

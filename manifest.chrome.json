@@ -3,6 +3,7 @@
   "name": "__MSG_appName__",
   "description": "__MSG_appDescription__",
   "version": "0.1.0",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxRBiOA7ujxkoINm0j6byPPar2o3JNECpK+9OOQNfHks/52x1OH8hWBT6+H4M49DIZG0VFS/2FNMev4ceZK9rzEfUcp+dQACJzODpIh8xlsvQqa2SlF/0OiGs8CeK76y8Y6zDhxJeIW+U7G/I9ZkO75FMpARU/NoO95bkVQ6bU1jZasnWDCg0V22V8ReTBShEARbONdNFaPWGRgF+7Li/JW9Nvll6fqWpzo98vurhKU3Hylx9oU2+wqgrI1yXZAngAlGYQ9sxE/AbPKF7z3yOkIvLr9oAQzRfTv85cqSQ6SIS0lEwAN6tjXXIx22OM/ykKXAarefmXEom0eByJceWgQIDAQAB",
   "default_locale": "en",
   "permissions": [
     "contextMenus",
@@ -15,9 +16,6 @@
     "<all_urls>"
   ],
   "background": {
-    "scripts": [
-      "src/background.js"
-    ],
     "service_worker": "src/background.js",
     "type": "module"
   },
@@ -59,11 +57,5 @@
         "<all_urls>"
       ]
     }
-  ],
-  "browser_specific_settings": {
-    "gecko": {
-      "id": "materialbox@example.local",
-      "strict_min_version": "121.0"
-    }
-  }
+  ]
 }
