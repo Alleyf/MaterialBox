@@ -519,12 +519,12 @@ function renderFilters() {
   safeSet("sync-panel-copy", t(state.language, "syncPanelCopy"));
   safeSet("sync-panel-hint", t(state.language, "syncProviderHint"));
   safeSet("sync-provider-label", t(state.language, "syncProvider"));
-  const _el = document.querySelector('#sync-provider-select option[value="none"]');
-if (_el) _el.textContent = t(state.language, "syncNone");
-  const _el = document.querySelector('#sync-provider-select option[value="s3"]');
-if (_el) _el.textContent = t(state.language, "syncS3");
-  const _el = document.querySelector('#sync-provider-select option[value="webdav"]');
-if (_el) _el.textContent = t(state.language, "syncWebdav");
+  const syncNoneOpt = document.querySelector('#sync-provider-select option[value="none"]');
+if (syncNoneOpt) syncNoneOpt.textContent = t(state.language, "syncNone");
+  const syncS3Opt = document.querySelector('#sync-provider-select option[value="s3"]');
+if (syncS3Opt) syncS3Opt.textContent = t(state.language, "syncS3");
+  const syncWebdavOpt = document.querySelector('#sync-provider-select option[value="webdav"]');
+if (syncWebdavOpt) syncWebdavOpt.textContent = t(state.language, "syncWebdav");
   safeSet("sync-s3-endpoint-label", t(state.language, "s3Endpoint"));
   safeSet("sync-s3-bucket-label", t(state.language, "s3Bucket"));
   safeSet("sync-s3-region-label", t(state.language, "s3Region"));
