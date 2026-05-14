@@ -9,8 +9,9 @@ import {
   putMedia,
   putMeta
 } from "./lib/db.js";
-import { uploadSyncArchive, downloadSyncArchive, testSyncConnection } from "./lib/sync.js";
 import { extensionApi, makeDownloadName } from "./lib/utils.js";
+import { getLanguage, t } from "./lib/i18n.js";
+import { uploadSyncArchive, downloadSyncArchive, testSyncConnection } from "./lib/sync.js";
 
 const MENU_IDS = {
   saveImage: "materialbox-save-image",
@@ -84,31 +85,6 @@ async function ensureMenus() {
       continue;
     }
   }
-}
-
-function getUiLanguage() {
-  return (extensionApi.i18n?.getUILanguage?.() ?? "en").toLowerCase().startsWith("zh") ? "zh" : "en";
-}
-
-function getText(language, key, params = {}) {
-  const dictionary = {
-    en: {
-      captureUnavailable: "This page cannot be scanned. Try a normal web page instead.",
-      captureEmpty: "No supported images or videos were found on this page.",
-      captureSuccess: "Saved {count} item(s) to your library",
-      captureSuccessFiltered: "Saved {count} item(s). Filtered {filtered} low-quality item(s).",
-      captureFailed: "Save failed. Please try again."
-    },
-    zh: {
-      captureUnavailable: "当前页面无法扫描，请切换到普通网页后再试。",
-      captureEmpty: "当前页面没有发现可保存的图片或视频。",
-      captureSuccess: "已保存 {count} 个素材到资源库",
-      captureSuccessFiltered: "已保存 {count} 个素材，过滤掉 {filtered} 个低质素材。",
-      captureFailed: "保存失败，请稍后重试。"
-    }
-  };
-  const template = dictionary[language]?.[key] ?? dictionary.en[key] ?? key;
-  return template.replace(/\{(\w+)\}/g, (_, token) => String(params[token] ?? ""));
 }
 
 async function fetchAsBlob(sourceUrl) {
@@ -408,7 +384,7 @@ extensionApi.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 
     if (message.type === "CAPTURE_ACTIVE_TAB_MEDIA") {
-      const language = getUiLanguage();
+      const language = await getLanguage();
       const tabId = message.tabId ?? (await extensionApi.tabs.query({ active: true, lastFocusedWindow: true }))[0]?.id;
       if (!tabId) {
         sendResponse({ ok: false, error: "No active tab" });
@@ -418,7 +394,7 @@ extensionApi.runtime.onMessage.addListener((message, sender, sendResponse) => {
       try {
         collected = await extensionApi.tabs.sendMessage(tabId, { type: "COLLECT_PAGE_MEDIA" });
       } catch (error) {
-        sendResponse({ ok: false, error: getText(language, "captureUnavailable") });
+        sendResponse({ ok: false, error: t(language, "captureUnavailable") });
         return;
       }
       const deduped = [...new Map(
@@ -427,16 +403,16 @@ extensionApi.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (!deduped.length) {
         await showSaveToast(tabId, {
           title: "MaterialBox",
-          message: getText(language, "captureEmpty"),
+          message: t(language, "captureEmpty"),
           tone: "info"
         });
-        sendResponse({ ok: false, error: getText(language, "captureEmpty") });
+        sendResponse({ ok: false, error: t(language, "captureEmpty") });
         return;
       }
       const { savedItems, filteredCount } = await saveManyMedia(deduped);
       const successMessage = filteredCount
-        ? getText(language, "captureSuccessFiltered", { count: savedItems.length, filtered: filteredCount })
-        : getText(language, "captureSuccess", { count: savedItems.length });
+        ? t(language, "captureSuccessFiltered", { count: savedItems.length, filtered: filteredCount })
+        : t(language, "captureSuccess", { count: savedItems.length });
       await showSaveToast(tabId, {
         title: "MaterialBox",
         message: successMessage,
