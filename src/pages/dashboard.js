@@ -178,7 +178,7 @@ function setText(id, value) {
 }
 
 function setFeedback(message = "") {
-  document.getElementById("feedback").textContent = message;
+  safeSet("feedback", message);
 }
 
 function showDashboardToast(message, tone = "success", duration = 2600) {
@@ -491,6 +491,11 @@ function renderDirectorySummary() {
   summary.textContent = t(state.language, "defaultDirectory");
 }
 
+function safeSet(id, value) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = value;
+}
+
 function renderFilters() {
   const categoryFilter = document.getElementById("category-filter");
   const languageSelect = document.getElementById("language-select-element");
@@ -500,56 +505,62 @@ function renderFilters() {
 
   languageSelect.value = state.language;
   searchInput.placeholder = t(state.language, "searchPlaceholder");
-  document.getElementById("import-btn").textContent = t(state.language, "importMedia");
-  document.getElementById("export-btn").textContent = t(state.language, "exportFiltered");
-  document.getElementById("smart-classify-btn").textContent = t(state.language, "smartClassify");
-  document.getElementById("select-visible-btn").textContent = t(state.language, "selectVisible");
-  document.getElementById("choose-directory-btn").textContent = t(state.language, "chooseFolder");
-  document.getElementById("clear-directory-btn").textContent = t(state.language, "clearFolder");
-  document.getElementById("export-directory-title").textContent = t(state.language, "exportDirectory");
-  document.getElementById("workspace-tools-title").textContent = t(state.language, "workspaceTools");
-  document.getElementById("workspace-tools-copy").textContent = t(state.language, "workspaceToolsCopy");
-  document.getElementById("sync-open-btn").textContent = t(state.language, "syncPanel");
-  document.getElementById("sync-panel-title").textContent = t(state.language, "syncPanel");
-  document.getElementById("sync-panel-copy").textContent = t(state.language, "syncPanelCopy");
-  document.getElementById("sync-panel-hint").textContent = t(state.language, "syncProviderHint");
-  document.getElementById("sync-provider-label").textContent = t(state.language, "syncProvider");
-  document.querySelector('#sync-provider-select option[value="none"]').textContent = t(state.language, "syncNone");
-  document.querySelector('#sync-provider-select option[value="s3"]').textContent = t(state.language, "syncS3");
-  document.querySelector('#sync-provider-select option[value="webdav"]').textContent = t(state.language, "syncWebdav");
-  document.getElementById("sync-s3-endpoint-label").textContent = t(state.language, "s3Endpoint");
-  document.getElementById("sync-s3-bucket-label").textContent = t(state.language, "s3Bucket");
-  document.getElementById("sync-s3-region-label").textContent = t(state.language, "s3Region");
-  document.getElementById("sync-s3-access-label").textContent = t(state.language, "s3AccessKey");
-  document.getElementById("sync-s3-secret-label").textContent = t(state.language, "s3SecretKey");
-  document.getElementById("sync-s3-prefix-label").textContent = t(state.language, "s3Prefix");
-  document.getElementById("sync-webdav-url-label").textContent = t(state.language, "webdavUrl");
-  document.getElementById("sync-webdav-user-label").textContent = t(state.language, "webdavUser");
-  document.getElementById("sync-webdav-pass-label").textContent = t(state.language, "webdavPass");
-  document.getElementById("sync-webdav-path-label").textContent = t(state.language, "webdavPath");
-  document.getElementById("sync-save-btn").textContent = t(state.language, "syncSave");
-  document.getElementById("sync-test-btn").textContent = t(state.language, "syncTest");
-  document.getElementById("sync-upload-btn").textContent = t(state.language, "syncUpload");
-  document.getElementById("sync-download-btn").textContent = t(state.language, "syncDownload");
-  document.getElementById("studio-panel-title").textContent = t(state.language, "studioPanel");
-  document.getElementById("studio-panel-copy").textContent = t(state.language, "studioPanelCopy");
-  document.getElementById("studio-panel-hint").textContent = t(state.language, "studioPanelHint");
-  document.getElementById("command-search-label").textContent = t(state.language, "commandSearch");
-  document.getElementById("view-pill").textContent = t(state.language, "localStudioPill");
-  document.getElementById("smart-categories-title").textContent = t(state.language, "smartCategories");
-  document.getElementById("clear-selection-btn").textContent = selectionCount
+  safeSet("import-btn", t(state.language, "importMedia"));
+  safeSet("export-btn", t(state.language, "exportFiltered"));
+  safeSet("smart-classify-btn", t(state.language, "smartClassify"));
+  safeSet("select-visible-btn", t(state.language, "selectVisible"));
+  safeSet("choose-directory-btn", t(state.language, "chooseFolder"));
+  safeSet("clear-directory-btn", t(state.language, "clearFolder"));
+  safeSet("export-directory-title", t(state.language, "exportDirectory"));
+  safeSet("workspace-tools-title", t(state.language, "workspaceTools"));
+  safeSet("workspace-tools-copy", t(state.language, "workspaceToolsCopy"));
+  safeSet("sync-open-btn", t(state.language, "syncPanel"));
+  safeSet("sync-panel-title", t(state.language, "syncPanel"));
+  safeSet("sync-panel-copy", t(state.language, "syncPanelCopy"));
+  safeSet("sync-panel-hint", t(state.language, "syncProviderHint"));
+  safeSet("sync-provider-label", t(state.language, "syncProvider"));
+  const _el = document.querySelector('#sync-provider-select option[value="none"]');
+if (_el) _el.textContent = t(state.language, "syncNone");
+  const _el = document.querySelector('#sync-provider-select option[value="s3"]');
+if (_el) _el.textContent = t(state.language, "syncS3");
+  const _el = document.querySelector('#sync-provider-select option[value="webdav"]');
+if (_el) _el.textContent = t(state.language, "syncWebdav");
+  safeSet("sync-s3-endpoint-label", t(state.language, "s3Endpoint"));
+  safeSet("sync-s3-bucket-label", t(state.language, "s3Bucket"));
+  safeSet("sync-s3-region-label", t(state.language, "s3Region"));
+  safeSet("sync-s3-access-label", t(state.language, "s3AccessKey"));
+  safeSet("sync-s3-secret-label", t(state.language, "s3SecretKey"));
+  safeSet("sync-s3-prefix-label", t(state.language, "s3Prefix"));
+  safeSet("sync-webdav-url-label", t(state.language, "webdavUrl"));
+  safeSet("sync-webdav-user-label", t(state.language, "webdavUser"));
+  safeSet("sync-webdav-pass-label", t(state.language, "webdavPass"));
+  safeSet("sync-webdav-path-label", t(state.language, "webdavPath"));
+  safeSet("sync-save-btn", t(state.language, "syncSave"));
+  safeSet("sync-test-btn", t(state.language, "syncTest"));
+  safeSet("sync-upload-btn", t(state.language, "syncUpload"));
+  safeSet("sync-download-btn", t(state.language, "syncDownload"));
+  safeSet("studio-panel-title", t(state.language, "studioPanel"));
+  safeSet("studio-panel-copy", t(state.language, "studioPanelCopy"));
+  safeSet("studio-panel-hint", t(state.language, "studioPanelHint"));
+  safeSet("command-search-label", t(state.language, "commandSearch"));
+  safeSet("view-pill", t(state.language, "localStudioPill"));
+  safeSet("smart-categories-title", t(state.language, "smartCategories"));
+  safeSet("clear-selection-btn", selectionCount
     ? `${t(state.language, "clearSelection")} (${selectionCount})`
-    : t(state.language, "clearSelection");
-  document.getElementById("delete-selected-btn").textContent = selectionCount
+    : t(state.language, "clearSelection"));
+  safeSet("delete-selected-btn", selectionCount
     ? `${t(state.language, "deleteSelected")} (${selectionCount})`
-    : t(state.language, "deleteSelected");
+    : t(state.language, "deleteSelected"));
 
   tabs.forEach((tab) => {
     tab.classList.toggle("is-active", tab.dataset.type === state.mediaType);
   });
-  document.querySelector('[data-type="all"]').textContent = t(state.language, "tabAll");
-  document.querySelector('[data-type="image"]').textContent = t(state.language, "tabImage");
-  document.querySelector('[data-type="video"]').textContent = t(state.language, "tabVideo");
+  const _el = document.querySelector('[data-type="all"]');
+if (_el) _el.textContent = t(state.language, "tabAll");
+  const _el = document.querySelector('[data-type="image"]');
+if (_el) _el.textContent = t(state.language, "tabImage");
+  const _el = document.querySelector('[data-type="video"]');
+if (_el) _el.textContent = t(state.language, "tabVideo");
 
   categoryFilter.innerHTML = [
     `<option value="all">${t(state.language, "allCategories")}</option>`,
@@ -684,16 +695,22 @@ function renderHeader(visibleItems) {
   setText("hero-images", String(imageCount));
   setText("hero-videos", String(videoCount));
   setText("hero-selection", String(state.selectedIds.size));
-  document.querySelector('.hero-card:nth-child(1) .hero-card-label').textContent = t(state.language, "visibleNow");
-  document.querySelector('.hero-card:nth-child(2) .hero-card-label').textContent = t(state.language, "imageCountTitle");
-  document.querySelector('.hero-card:nth-child(3) .hero-card-label').textContent = t(state.language, "videoCountTitle");
-  document.querySelector('.hero-card:nth-child(4) .hero-card-label').textContent = t(state.language, "selectionTitle");
+  const _el = document.querySelector('.hero-card:nth-child(1) .hero-card-label');
+if (_el) _el.textContent = t(state.language, "visibleNow");
+  const _el = document.querySelector('.hero-card:nth-child(2) .hero-card-label');
+if (_el) _el.textContent = t(state.language, "imageCountTitle");
+  const _el = document.querySelector('.hero-card:nth-child(3) .hero-card-label');
+if (_el) _el.textContent = t(state.language, "videoCountTitle");
+  const _el = document.querySelector('.hero-card:nth-child(4) .hero-card-label');
+if (_el) _el.textContent = t(state.language, "selectionTitle");
   setText("hero-visible-copy", t(state.language, "visibleNowCopy", {
     type: activeType,
     category: activeCategory
   }));
-  document.querySelector('.hero-card:nth-child(2) .hero-card-copy').textContent = t(state.language, "imageCountCopy");
-  document.querySelector('.hero-card:nth-child(3) .hero-card-copy').textContent = t(state.language, "videoCountCopy");
+  const _el = document.querySelector('.hero-card:nth-child(2) .hero-card-copy');
+if (_el) _el.textContent = t(state.language, "imageCountCopy");
+  const _el = document.querySelector('.hero-card:nth-child(3) .hero-card-copy');
+if (_el) _el.textContent = t(state.language, "videoCountCopy");
   setText("hero-selection-copy", state.selectedIds.size
     ? t(state.language, "selectionReady", { count: state.selectedIds.size })
     : t(state.language, "selectionIdle"));
@@ -1787,7 +1804,7 @@ function renderStoragePanel() {
 
 function renderTagsDialog() {
   const tagsList = document.getElementById("tags-list");
-  document.getElementById("tags-dialog-title").textContent = t(state.language, "manageTags");
+  safeSet("tags-dialog-title", t(state.language, "manageTags"));
   
   tagsList.innerHTML = state.tags.map(tag => `
     <div class="tag-item">
@@ -1859,16 +1876,16 @@ async function loadData() {
   renderDirectorySummary();
   renderTagChips();
   renderCollections();
-  document.getElementById("model-provider").textContent = state.aiStatus
+  safeSet("model-provider", state.aiStatus
     ? t(state.language, "hybridModelReady")
-    : t(state.language, "rulesFallbackActive");
-  document.getElementById("tags-panel-title").textContent = t(state.language, "tags");
-  document.getElementById("advanced-filters-label").textContent = t(state.language, "advancedFilters");
-  document.getElementById("date-range-label").textContent = t(state.language, "dateRange");
-  document.getElementById("source-domain-label").textContent = t(state.language, "sourceDomain");
-  document.getElementById("dimensions-label").textContent = t(state.language, "dimensions");
-  document.getElementById("clear-filters-btn").textContent = t(state.language, "clearFilters");
-  document.getElementById("collections-panel-title").textContent = t(state.language, "collections");
+    : t(state.language, "rulesFallbackActive"));
+  safeSet("tags-panel-title", t(state.language, "tags"));
+  safeSet("advanced-filters-label", t(state.language, "advancedFilters"));
+  safeSet("date-range-label", t(state.language, "dateRange"));
+  safeSet("source-domain-label", t(state.language, "sourceDomain"));
+  safeSet("dimensions-label", t(state.language, "dimensions"));
+  safeSet("clear-filters-btn", t(state.language, "clearFilters"));
+  safeSet("collections-panel-title", t(state.language, "collections"));
 }
 
 function getCollectionItemCount(collection) {
