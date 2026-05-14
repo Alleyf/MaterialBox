@@ -1,0 +1,61 @@
+{
+  "manifest_version": 3,
+  "name": "__MSG_appName__",
+  "description": "__MSG_appDescription__",
+  "version": "0.1.0",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxRBiOA7ujxkoINm0j6byPPar2o3JNECpK+9OOQNfHks/52x1OH8hWBT6+H4M49DIZG0VFS/2FNMev4ceZK9rzEfUcp+dQACJzODpIh8xlsvQqa2SlF/0OiGs8CeK76y8Y6zDhxJeIW+U7G/I9ZkO75FMpARU/NoO95bkVQ6bU1jZasnWDCg0V22V8ReTBShEARbONdNFaPWGRgF+7Li/JW9Nvll6fqWpzo98vurhKU3Hylx9oU2+wqgrI1yXZAngAlGYQ9sxE/AbPKF7z3yOkIvLr9oAQzRfTv85cqSQ6SIS0lEwAN6tjXXIx22OM/ykKXAarefmXEom0eByJceWgQIDAQAB",
+  "default_locale": "en",
+  "permissions": [
+    "contextMenus",
+    "storage",
+    "downloads",
+    "tabs",
+    "notifications"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "src/background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "__MSG_appName__",
+    "default_popup": "src/pages/popup.html",
+    "default_icon": {
+      "16": "src/assets/icons/icon-16.png",
+      "32": "src/assets/icons/icon-32.png"
+    }
+  },
+  "icons": {
+    "16": "src/assets/icons/icon-16.png",
+    "32": "src/assets/icons/icon-32.png",
+    "48": "src/assets/icons/icon-48.png",
+    "128": "src/assets/icons/icon-128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "src/content-script.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "src/models/*",
+        "src/models/**/*",
+        "src/assets/icons/*",
+        "node_modules/@mediapipe/tasks-vision/*",
+        "node_modules/@mediapipe/tasks-vision/wasm/*"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ]
+}

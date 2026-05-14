@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MaterialBox Library</title>
+    <link rel="stylesheet" href="./dashboard.css" />
+  </head>
+  <body>
+    <div class="background"></div>
+    <main class="workspace">
+      <aside class="rail">
+        <div class="rail-brand">
+          <img class="brand-icon" src="../assets/logo-mark.svg" alt="MaterialBox logo" />
+          <div>
+            <p class="eyebrow">MaterialBox</p>
+            <h1 id="title"></h1>
+            <p id="subtitle" class="subtitle"></p>
+          </div>
+        </div>
+
+        <section class="panel stats-panel">
+          <div class="metric-card">
+            <span class="metric-label" id="summary-text"></span>
+            <strong id="summary-total">0</strong>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label" id="model-summary"></span>
+            <strong id="model-strength">0</strong>
+            <em id="model-provider" class="metric-note"></em>
+          </div>
+        </section>
+
+        <section class="panel rail-tools">
+          <div class="panel-head">
+            <span id="workspace-tools-title">Workspace Tools</span>
+            <span id="workspace-tools-copy" class="panel-caption">Organize, export, refine</span>
+          </div>
+          <button id="smart-classify-btn" class="ghost"></button>
+          <button id="select-visible-btn" class="ghost"></button>
+          <button id="clear-selection-btn" class="ghost"></button>
+          <button id="delete-selected-btn" class="danger"></button>
+          <button id="import-btn" class="ghost"></button>
+          <button id="export-btn" class="primary"></button>
+          <input id="import-input" type="file" accept="image/*,video/*" multiple hidden />
+        </section>
+
+        <section class="panel directory-panel">
+          <div class="panel-head">
+            <span id="export-directory-title">Export Directory</span>
+            <span class="panel-caption" id="directory-summary"></span>
+          </div>
+          <div class="panel-actions">
+            <button id="choose-directory-btn" class="ghost">Choose folder</button>
+            <button id="clear-directory-btn" class="ghost">Clear</button>
+          </div>
+        </section>
+
+        <section class="panel status-panel">
+          <div class="panel-head">
+            <span id="studio-panel-title">Studio</span>
+            <span id="studio-panel-copy" class="panel-caption">Crop, compress, clip</span>
+          </div>
+          <p id="studio-panel-hint" class="status-copy">Open any asset to reveal lightweight editing tools without leaving the library.</p>
+        </section>
+      </aside>
+
+      <section class="mainboard">
+        <header class="hero">
+          <div class="hero-top">
+            <div class="toolbar-search">
+              <p id="command-search-label" class="toolbar-label">Command Search</p>
+              <input id="search" type="search" />
+            </div>
+            <div class="hero-actions">
+              <select id="language-select">
+                <option value="en">English</option>
+                <option value="zh">中文</option>
+              </select>
+              <div id="view-pill" class="view-pill">IndexedDB · Local AI Studio</div>
+            </div>
+          </div>
+
+          <div class="hero-bottom">
+            <nav class="media-tabs" id="media-tabs" aria-label="Media type tabs">
+              <button class="tab is-active" data-type="all"></button>
+              <button class="tab" data-type="image"></button>
+              <button class="tab" data-type="video"></button>
+            </nav>
+            <select id="category-filter"></select>
+          </div>
+
+          <div class="hero-strip">
+            <article class="hero-card">
+              <span class="hero-card-label">Visible now</span>
+              <strong id="hero-visible">0</strong>
+              <p id="hero-visible-copy" class="hero-card-copy"></p>
+            </article>
+            <article class="hero-card">
+              <span class="hero-card-label">Images</span>
+              <strong id="hero-images">0</strong>
+              <p class="hero-card-copy">Stills, graphics, screenshots</p>
+            </article>
+            <article class="hero-card">
+              <span class="hero-card-label">Videos</span>
+              <strong id="hero-videos">0</strong>
+              <p class="hero-card-copy">Clips, references, motion</p>
+            </article>
+            <article class="hero-card accent">
+              <span class="hero-card-label">Selection</span>
+              <strong id="hero-selection">0</strong>
+              <p id="hero-selection-copy" class="hero-card-copy"></p>
+            </article>
+          </div>
+        </header>
+
+        <section class="panel category-panel">
+          <div class="panel-head">
+            <span id="smart-categories-title">Smart Categories</span>
+            <span class="panel-caption" id="category-summary"></span>
+          </div>
+          <div id="category-chips" class="category-chips"></div>
+        </section>
+
+        <section id="grid" class="grid"></section>
+        <section id="empty" class="empty" hidden></section>
+        <p id="feedback" class="feedback" aria-live="polite"></p>
+      </section>
+    </main>
+
+    <dialog id="preview-dialog" class="dialog">
+      <article id="preview-content"></article>
+    </dialog>
+
+    <script type="module" src="./dashboard.js"></script>
+  </body>
+</html>

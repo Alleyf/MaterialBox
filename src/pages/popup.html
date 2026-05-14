@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MaterialBox</title>
+    <link rel="stylesheet" href="./popup.css" />
+  </head>
+  <body>
+    <main class="popup">
+      <header class="hero">
+        <div class="hero-row">
+          <img class="brand-icon" src="../assets/logo-mark.svg" alt="MaterialBox logo" />
+          <div>
+            <p class="eyebrow">MaterialBox</p>
+            <h1 id="popup-title"></h1>
+            <p id="popup-copy" class="hero-copy">Local-first capture, instant AI sorting, export-ready studio.</p>
+          </div>
+        </div>
+        <div class="hero-panel">
+          <div>
+            <span>Local AI</span>
+            <strong id="ai-status">Loading...</strong>
+          </div>
+          <div class="hero-badge">Smart Save</div>
+        </div>
+      </header>
+      <section class="stats" id="stats"></section>
+      <section class="actions">
+        <button id="open-library" class="primary"></button>
+        <button id="save-page"></button>
+      </section>
+    </main>
+    <script type="module" src="./popup.js"></script>
+  </body>
+</html>
