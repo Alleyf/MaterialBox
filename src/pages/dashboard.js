@@ -555,12 +555,12 @@ if (syncWebdavOpt) syncWebdavOpt.textContent = t(state.language, "syncWebdav");
   tabs.forEach((tab) => {
     tab.classList.toggle("is-active", tab.dataset.type === state.mediaType);
   });
-  const _el = document.querySelector('[data-type="all"]');
-if (_el) _el.textContent = t(state.language, "tabAll");
-  const _el = document.querySelector('[data-type="image"]');
-if (_el) _el.textContent = t(state.language, "tabImage");
-  const _el = document.querySelector('[data-type="video"]');
-if (_el) _el.textContent = t(state.language, "tabVideo");
+  const _el0 = document.querySelector('[data-type="all"]');
+if (_el0) _el0.textContent = t(state.language, "tabAll");
+  const _el1 = document.querySelector('[data-type="image"]');
+if (_el1) _el1.textContent = t(state.language, "tabImage");
+  const _el2 = document.querySelector('[data-type="video"]');
+if (_el2) _el2.textContent = t(state.language, "tabVideo");
 
   categoryFilter.innerHTML = [
     `<option value="all">${t(state.language, "allCategories")}</option>`,
@@ -695,22 +695,22 @@ function renderHeader(visibleItems) {
   setText("hero-images", String(imageCount));
   setText("hero-videos", String(videoCount));
   setText("hero-selection", String(state.selectedIds.size));
-  const _el = document.querySelector('.hero-card:nth-child(1) .hero-card-label');
-if (_el) _el.textContent = t(state.language, "visibleNow");
-  const _el = document.querySelector('.hero-card:nth-child(2) .hero-card-label');
-if (_el) _el.textContent = t(state.language, "imageCountTitle");
-  const _el = document.querySelector('.hero-card:nth-child(3) .hero-card-label');
-if (_el) _el.textContent = t(state.language, "videoCountTitle");
-  const _el = document.querySelector('.hero-card:nth-child(4) .hero-card-label');
-if (_el) _el.textContent = t(state.language, "selectionTitle");
+  const _el3 = document.querySelector('.hero-card:nth-child(1) .hero-card-label');
+if (_el3) _el3.textContent = t(state.language, "visibleNow");
+  const _el4 = document.querySelector('.hero-card:nth-child(2) .hero-card-label');
+if (_el4) _el4.textContent = t(state.language, "imageCountTitle");
+  const _el5 = document.querySelector('.hero-card:nth-child(3) .hero-card-label');
+if (_el5) _el5.textContent = t(state.language, "videoCountTitle");
+  const _el6 = document.querySelector('.hero-card:nth-child(4) .hero-card-label');
+if (_el6) _el6.textContent = t(state.language, "selectionTitle");
   setText("hero-visible-copy", t(state.language, "visibleNowCopy", {
     type: activeType,
     category: activeCategory
   }));
-  const _el = document.querySelector('.hero-card:nth-child(2) .hero-card-copy');
-if (_el) _el.textContent = t(state.language, "imageCountCopy");
-  const _el = document.querySelector('.hero-card:nth-child(3) .hero-card-copy');
-if (_el) _el.textContent = t(state.language, "videoCountCopy");
+  const _el7 = document.querySelector('.hero-card:nth-child(2) .hero-card-copy');
+if (_el7) _el7.textContent = t(state.language, "imageCountCopy");
+  const _el8 = document.querySelector('.hero-card:nth-child(3) .hero-card-copy');
+if (_el8) _el8.textContent = t(state.language, "videoCountCopy");
   setText("hero-selection-copy", state.selectedIds.size
     ? t(state.language, "selectionReady", { count: state.selectedIds.size })
     : t(state.language, "selectionIdle"));
