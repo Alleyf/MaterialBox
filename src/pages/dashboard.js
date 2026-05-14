@@ -1,9 +1,12 @@
-import { getAllMedia, getMeta, putMedia, putMeta } from "../lib/db.js";
+import { getAllMedia, getMeta, putMedia, putMeta, getTags, addTag, removeTag, addTagToMedia, removeTagFromMedia, getCollections, createCollection, updateCollection, deleteCollection, addToCollection, removeFromCollection, getCollectionItems } from "../lib/db.js";
+import { createLazyLoader } from "../lib/lazyload.js";
 import { inferCategory } from "../lib/classifier.js";
 import { getCategoryOptions, getLanguage, setLanguage, t } from "../lib/i18n.js";
 import { classifyImageBlobInPage } from "../lib/page-classifier.js";
 import { showToast } from "../lib/toast.js";
 import { extensionApi, formatBytes, formatDate } from "../lib/utils.js";
+import { createShortcutHandler } from "../lib/shortcuts.js";
+import { createHistoryManager, createBatchAction } from "../lib/history.js";
 
 const state = {
   language: "en",
@@ -16,7 +19,21 @@ const state = {
   selectedIds: new Set(),
   exportDirectoryHandle: null,
   exportDirectoryName: "",
-  syncSettings: createDefaultSyncSettings()
+  syncSettings: createDefaultSyncSettings(),
+  focusedIndex: -1,
+  commandPaletteOpen: false,
+  history: createHistoryManager(),
+  tags: [],
+  selectedTag: "all",
+  advancedFilters: {
+    dateFrom: null,
+    dateTo: null,
+    sourceDomain: "",
+    minWidth: null,
+    maxWidth: null
+  },
+  collections: [],
+  selectedCollection: null
 };
 
 function createDefaultSyncSettings() {
@@ -74,11 +91,74 @@ function matchesFilters(item) {
   if (state.mediaType !== "all" && item.type !== state.mediaType) {
     return false;
   }
+  if (state.selectedTag !== "all" && (!item.tags || !item.tags.includes(state.selectedTag))) {
+    return false;
+  }
+  
+  const { dateFrom, dateTo, sourceDomain, minWidth, maxWidth } = state.advancedFilters;
+  
+  if (dateFrom) {
+    const itemDate = new Date(item.createdAt).setHours(0, 0, 0, 0);
+    const fromDate = new Date(dateFrom).getTime();
+    if (itemDate < fromDate) return false;
+  }
+  
+  if (dateTo) {
+    const itemDate = new Date(item.createdAt).setHours(23, 59, 59, 999);
+    const toDate = new Date(dateTo).getTime();
+    if (itemDate > toDate) return false;
+  }
+  
+  if (sourceDomain) {
+    try {
+      const url = new URL(item.sourceUrl);
+      if (!url.hostname.includes(sourceDomain.toLowerCase())) {
+        return false;
+      }
+    } catch {
+      return false;
+    }
+  }
+  
+  if (minWidth && item.width < minWidth) {
+    return false;
+  }
+  
+  if (maxWidth && item.width > maxWidth) {
+    return false;
+  }
+  
   return true;
 }
 
 function getVisibleItems() {
-  return state.items.filter(matchesFilters);
+  let items = state.items.filter(matchesFilters);
+  
+  if (state.selectedCollection) {
+    const collection = state.collections.find(c => c.id === state.selectedCollection);
+    if (collection) {
+      if (collection.isSmart && collection.rules) {
+        items = items.filter(item => {
+          if (collection.rules.category && item.category !== collection.rules.category) return false;
+          if (collection.rules.type && item.type !== collection.rules.type) return false;
+          if (collection.rules.sourceDomain) {
+            try {
+              const url = new URL(item.sourceUrl);
+              if (!url.hostname.includes(collection.rules.sourceDomain)) return false;
+            } catch {
+              return false;
+            }
+          }
+          return true;
+        });
+      } else {
+        const collectionIds = new Set(collection.items);
+        items = items.filter(item => collectionIds.has(item.id));
+      }
+    }
+  }
+  
+  return items;
 }
 
 function getCategoryCounts() {
@@ -413,7 +493,7 @@ function renderDirectorySummary() {
 
 function renderFilters() {
   const categoryFilter = document.getElementById("category-filter");
-  const languageSelect = document.getElementById("language-select");
+  const languageSelect = document.getElementById("language-select-element");
   const searchInput = document.getElementById("search");
   const tabs = [...document.querySelectorAll(".tab")];
   const selectionCount = state.selectedIds.size;
@@ -527,6 +607,54 @@ function renderCategoryChips() {
       state.category = chip.dataset.category;
       document.getElementById("category-filter").value = state.category;
       renderCategoryChips();
+      renderGrid();
+    });
+  });
+}
+
+function getTagCounts() {
+  const counts = new Map();
+  for (const item of state.items) {
+    if (item.tags) {
+      for (const tagId of item.tags) {
+        counts.set(tagId, (counts.get(tagId) ?? 0) + 1);
+      }
+    }
+  }
+  return counts;
+}
+
+function renderTagChips() {
+  const counts = getTagCounts();
+  const chipHost = document.getElementById("tag-chips");
+  const tagMap = new Map(state.tags.map(tag => [tag.id, tag]));
+
+  const usedTags = [...counts.entries()]
+    .filter(([, count]) => count > 0)
+    .map(([tagId]) => tagMap.get(tagId))
+    .filter(Boolean);
+
+  chipHost.innerHTML = `
+    <button class="category-chip ${state.selectedTag === "all" ? "is-active" : ""}" data-tag="all">
+      <span>${t(state.language, "allCategories")}</span>
+      <strong>${state.items.length}</strong>
+    </button>
+    ${usedTags.map((tag) => `
+      <button
+        class="category-chip ${state.selectedTag === tag.id ? "is-active" : ""}"
+        data-tag="${tag.id}"
+        style="--tag-color: ${tag.color}"
+      >
+        <span>${tag.name}</span>
+        <strong>${counts.get(tag.id) ?? 0}</strong>
+      </button>
+    `).join("")}
+  `;
+
+  chipHost.querySelectorAll("[data-tag]").forEach((chip) => {
+    chip.addEventListener("click", () => {
+      state.selectedTag = chip.dataset.tag;
+      renderTagChips();
       renderGrid();
     });
   });
@@ -687,13 +815,10 @@ function renderPreview(item) {
         <div class="studio-media">${mediaMarkup}</div>
         <div class="studio-meta">
           <div class="studio-chip-row">
-            <span class="studio-chip">${t(state.language, "category")}: ${t(state.language, item.category)}</span>
             <span class="studio-chip">${item.type === "video" ? t(state.language, "tabVideo") : t(state.language, "tabImage")}</span>
             <span class="studio-chip">${formatBytes(item.blob.size)}</span>
           </div>
-          <span>${t(state.language, "category")}: ${t(state.language, item.category)}</span>
           <span>${t(state.language, "aiCategory")}: ${t(state.language, item.ai?.label ?? "uncategorized")} (${Math.round((item.ai?.confidence ?? 0) * 100)}%)</span>
-          ${predictionText ? `<span>Vision: ${predictionText}</span>` : ""}
           <span>${t(state.language, "size")}: ${formatBytes(item.blob.size)}</span>
           <span>${t(state.language, "savedAt")}: ${formatDate(item.createdAt, state.language)}</span>
           <a href="${item.pageUrl}" target="_blank" rel="noreferrer">${t(state.language, "sourcePage")}</a>
@@ -988,7 +1113,23 @@ async function deleteItem(id) {
   if (!confirm(t(state.language, "confirmDelete"))) {
     return;
   }
+  const item = state.items.find(i => i.id === id);
   state.selectedIds.delete(id);
+  
+  const action = createBatchAction(
+    "delete",
+    { id, item },
+    async () => {
+      if (item) {
+        await putMedia(item);
+      }
+    },
+    async () => {
+      await extensionApi.runtime.sendMessage({ type: "DELETE_MEDIA", id });
+    }
+  );
+  
+  state.history.push(action);
   await extensionApi.runtime.sendMessage({ type: "DELETE_MEDIA", id });
   await loadData();
 }
@@ -1001,6 +1142,23 @@ async function deleteSelectedItems() {
   if (!confirm(t(state.language, "confirmDeleteSelected", { count: ids.length }))) {
     return;
   }
+  
+  const items = state.items.filter(i => ids.includes(i.id));
+  
+  const action = createBatchAction(
+    "delete-batch",
+    { ids, items },
+    async () => {
+      for (const item of items) {
+        await putMedia(item);
+      }
+    },
+    async () => {
+      await extensionApi.runtime.sendMessage({ type: "DELETE_MEDIA_BATCH", ids });
+    }
+  );
+  
+  state.history.push(action);
   await extensionApi.runtime.sendMessage({ type: "DELETE_MEDIA_BATCH", ids });
   state.selectedIds.clear();
   await loadData();
@@ -1106,9 +1264,23 @@ async function runSyncTest() {
 }
 
 async function reclassifyAllItems() {
-  setFeedback(t(state.language, "studioSaving"));
+  const btn = document.getElementById("smart-classify-btn");
+  const originalContent = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="animation: spin 1s linear infinite;">
+      <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+    </svg>
+    <span>Classifying...</span>
+  `;
+  
   let count = 0;
-  for (const item of state.items) {
+  const total = state.items.length;
+  
+  for (let i = 0; i < state.items.length; i++) {
+    const item = state.items[i];
+    setFeedback(`Classifying ${i + 1}/${total}...`);
+    
     const ruleAi = inferCategory(item);
     const visionAi = item.type === "image"
       ? await classifyImageBlobInPage(item.blob).catch(() => null)
@@ -1126,7 +1298,12 @@ async function reclassifyAllItems() {
     await putMedia(item);
     count += 1;
   }
+  
   await loadData();
+  
+  btn.disabled = false;
+  btn.innerHTML = originalContent;
+  
   const message = t(state.language, "reclassifyDone", { count });
   setFeedback(message);
   showDashboardToast(message);
@@ -1150,10 +1327,17 @@ function renderGrid() {
   empty.hidden = true;
   grid.innerHTML = "";
 
-  for (const item of visibleItems) {
+  const lazyLoader = createLazyLoader();
+
+  for (let index = 0; index < visibleItems.length; index++) {
+    const item = visibleItems[index];
     const previewUrl = createPreviewUrl(item);
     const card = document.createElement("article");
     card.className = "card";
+    card.dataset.id = item.id;
+    if (index === state.focusedIndex) {
+      card.classList.add("is-focused");
+    }
     const media = item.type === "video"
       ? `<video src="${previewUrl}" muted playsinline></video>`
       : `<img src="${previewUrl}" alt="">`;
@@ -1163,29 +1347,37 @@ function renderGrid() {
         <span class="badge">${t(state.language, item.category)}</span>
         <input class="card-select" type="checkbox" ${state.selectedIds.has(item.id) ? "checked" : ""} />
         <div class="thumb-actions">
-          <button class="thumb-action" data-action="preview">${t(state.language, "preview")}</button>
-          <button class="thumb-action" data-action="export">${t(state.language, "exportItem")}</button>
-          <button class="thumb-action" data-action="delete">${t(state.language, "deleteItem")}</button>
+          <button class="thumb-action" data-action="preview">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+          </button>
+          <button class="thumb-action" data-action="export">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          </button>
+          <button class="thumb-action" data-action="delete">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          </button>
         </div>
       </div>
-      <div class="body">
+      <div class="card-body">
         <div class="card-topline">
-          <span class="tiny-pill">${item.type === "video" ? t(state.language, "tabVideo") : t(state.language, "tabImage")}</span>
-          <span class="tiny-pill">${Math.round((item.ai?.confidence ?? 0) * 100)}% AI</span>
+          <span class="type-badge ${item.type === "video" ? "video" : ""}">${item.type === "video" ? t(state.language, "tabVideo") : t(state.language, "tabImage")}</span>
+          <span class="type-badge">${Math.round((item.ai?.confidence ?? 0) * 100)}% AI</span>
         </div>
-        <div class="title-row">
-          <h2 class="title">${item.title || item.pageTitle || item.sourceUrl}</h2>
-        </div>
-        <div class="meta">
+        <h2 class="card-title">${item.title || item.pageTitle || item.sourceUrl}</h2>
+        <div class="card-meta">
           <span>${t(state.language, "size")}: ${formatBytes(item.blob.size)}</span>
           <span>${t(state.language, "savedAt")}: ${formatDate(item.createdAt, state.language)}</span>
-          <a class="source-link" href="${item.pageUrl || item.sourceUrl}" target="_blank" rel="noreferrer">${item.pageTitle || item.sourceUrl}</a>
+          <a href="${item.pageUrl || item.sourceUrl}" target="_blank" rel="noreferrer">${item.pageTitle || item.sourceUrl}</a>
         </div>
         <div class="card-footer">
-          <button data-action="preview">${t(state.language, "preview")}</button>
-          <div class="footer-actions">
-            <button data-action="export">${t(state.language, "exportItem")}</button>
-            <button data-action="delete">${t(state.language, "deleteItem")}</button>
+          <button class="btn btn-sm btn-secondary" data-action="preview">${t(state.language, "preview")}</button>
+          <div class="card-actions">
+            <button class="btn btn-sm btn-icon btn-ghost" data-action="export" title="${t(state.language, "exportItem")}">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            </button>
+            <button class="btn btn-sm btn-icon btn-danger" data-action="delete" title="${t(state.language, "deleteItem")}">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            </button>
           </div>
         </div>
       </div>
@@ -1218,7 +1410,7 @@ function renderGrid() {
       await updateCategory(item.id, options[nextIndex].value);
     });
     card.addEventListener("remove", () => URL.revokeObjectURL(previewUrl));
-    grid.append(card);
+    grid.appendChild(card);
   }
 }
 
@@ -1276,14 +1468,382 @@ async function importFiles(fileList) {
   showDashboardToast(message);
 }
 
+function getGridColumns() {
+  const grid = document.getElementById("grid");
+  const style = window.getComputedStyle(grid);
+  const templateColumns = style.gridTemplateColumns;
+  return templateColumns.split(" ").length || 4;
+}
+
+function getVisibleItemAtIndex(index) {
+  const visibleItems = getVisibleItems();
+  return visibleItems[index] || null;
+}
+
+function getCurrentFocusedItem() {
+  if (state.focusedIndex < 0) return null;
+  return getVisibleItemAtIndex(state.focusedIndex);
+}
+
+function navigateGrid(direction) {
+  const visibleItems = getVisibleItems();
+  if (!visibleItems.length) return;
+  
+  const cols = getGridColumns();
+  let newIndex = state.focusedIndex;
+  
+  if (newIndex < 0) {
+    newIndex = 0;
+  } else {
+    switch (direction) {
+      case "up":
+        newIndex = Math.max(0, newIndex - cols);
+        break;
+      case "down":
+        newIndex = Math.min(visibleItems.length - 1, newIndex + cols);
+        break;
+      case "left":
+        newIndex = Math.max(0, newIndex - 1);
+        break;
+      case "right":
+        newIndex = Math.min(visibleItems.length - 1, newIndex + 1);
+        break;
+    }
+  }
+  
+  state.focusedIndex = newIndex;
+  const item = visibleItems[newIndex];
+  if (item) {
+    const card = document.querySelector(`[data-id="${item.id}"]`);
+    if (card) {
+      card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }
+}
+
+function toggleSelectionFocused() {
+  const item = getCurrentFocusedItem();
+  if (!item) return;
+  
+  if (state.selectedIds.has(item.id)) {
+    state.selectedIds.delete(item.id);
+  } else {
+    state.selectedIds.add(item.id);
+  }
+  renderGrid();
+}
+
+function previewFocused() {
+  const item = getCurrentFocusedItem();
+  if (!item) return;
+  renderPreview(item);
+}
+
+function exportFocused() {
+  const item = getCurrentFocusedItem();
+  if (!item) return;
+  const visibleItems = getVisibleItems();
+  if (state.selectedIds.has(item.id)) {
+    const selectedItems = visibleItems.filter(i => state.selectedIds.has(i.id));
+    if (selectedItems.length === 1) {
+      exportBlobFromPage(item.blob, buildItemFilename(item));
+    } else {
+      exportSelectedItemsAsZip(selectedItems);
+    }
+  } else {
+    exportBlobFromPage(item.blob, buildItemFilename(item));
+  }
+}
+
+function deleteFocused() {
+  const item = getCurrentFocusedItem();
+  if (!item) return;
+  deleteItem(item.id);
+}
+
+function cycleCategoryFocused() {
+  const item = getCurrentFocusedItem();
+  if (!item) return;
+  const options = getCategoryOptions(state.language);
+  const nextIndex = (options.findIndex((option) => option.value === item.category) + 1) % options.length;
+  updateCategory(item.id, options[nextIndex].value);
+}
+
+function selectAllVisible() {
+  for (const item of getVisibleItems()) {
+    state.selectedIds.add(item.id);
+  }
+  renderGrid();
+}
+
+function invertSelection() {
+  const visibleIds = new Set(getVisibleItems().map(i => i.id));
+  for (const id of visibleIds) {
+    if (state.selectedIds.has(id)) {
+      state.selectedIds.delete(id);
+    } else {
+      state.selectedIds.add(id);
+    }
+  }
+  renderGrid();
+}
+
+async function exportSelectedItemsAsZip(items) {
+  if (!items.length) return;
+  if (items.length === 1) {
+    await exportBlobFromPage(items[0].blob, buildItemFilename(items[0]));
+    return;
+  }
+  const exporter = await import("../generated/export.bundle.js");
+  const zipBlob = await exporter.buildZipBlob(items);
+  await exportBlobFromPage(
+    zipBlob,
+    `materialbox-export-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.zip`
+  );
+  setFeedback(t(state.language, "zipDone"));
+  showDashboardToast(t(state.language, "zipDone"));
+}
+
+const COMMANDS = [
+  { id: "undo", labelKey: "undo", shortcut: "⌘Z", action: () => performUndo(), condition: () => state.history.getState().canUndo },
+  { id: "redo", labelKey: "redo", shortcut: "⌘⇧Z", action: () => performRedo(), condition: () => state.history.getState().canRedo },
+  { id: "select-all", labelKey: "selectVisible", shortcut: "A", action: () => selectAllVisible() },
+  { id: "clear-selection", labelKey: "clearSelection", shortcut: "Esc", action: () => { state.selectedIds.clear(); renderGrid(); } },
+  { id: "export-selected", labelKey: "exportFiltered", shortcut: "E", action: () => {
+    const items = getVisibleItems().filter(i => state.selectedIds.has(i.id));
+    exportSelectedItemsAsZip(items);
+  }},
+  { id: "delete-selected", labelKey: "deleteSelected", shortcut: "Del", action: () => deleteSelectedItems() },
+  { id: "smart-classify", labelKey: "smartClassify", shortcut: "", action: () => reclassifyAllItems() },
+  { id: "open-sync", labelKey: "syncPanel", shortcut: "", action: () => document.getElementById("sync-dialog").showModal() },
+  { id: "import", labelKey: "importMedia", shortcut: "", action: () => document.getElementById("import-input").click() },
+  { id: "view-all", labelKey: "tabAll", shortcut: "", action: () => { state.mediaType = "all"; state.category = "all"; renderGrid(); } },
+  { id: "view-images", labelKey: "tabImage", shortcut: "", action: () => { state.mediaType = "image"; renderGrid(); } },
+  { id: "view-videos", labelKey: "tabVideo", shortcut: "", action: () => { state.mediaType = "video"; renderGrid(); } },
+  { id: "focus-search", labelKey: "searchPlaceholder", shortcut: "/", action: () => { closeCommandPalette(); document.getElementById("search").focus(); } }
+];
+
+function renderCommandResults(query = "") {
+  const resultsContainer = document.getElementById("command-results");
+  const filtered = COMMANDS
+    .filter(cmd => {
+      if (cmd.condition && !cmd.condition()) return false;
+      const label = t(state.language, cmd.labelKey).toLowerCase();
+      const q = query.toLowerCase();
+      return label.includes(q) || cmd.id.includes(q);
+    });
+
+  commandSelectedIndex = 0;
+
+  resultsContainer.innerHTML = filtered.map((cmd, index) => `
+    <button class="command-item ${index === commandSelectedIndex ? 'is-selected' : ''}" data-index="${index}">
+      <span class="command-label">${t(state.language, cmd.labelKey)}</span>
+      ${cmd.shortcut ? `<span class="command-shortcut">${cmd.shortcut}</span>` : ''}
+    </button>
+  `).join("");
+
+  resultsContainer.querySelectorAll(".command-item").forEach(item => {
+    item.addEventListener("click", () => {
+      const index = parseInt(item.dataset.index);
+      const cmd = filtered[index];
+      if (cmd) {
+        closeCommandPalette();
+        cmd.action();
+      }
+    });
+  });
+}
+
+let commandSelectedIndex = 0;
+
+function openCommandPalette() {
+  const dialog = document.getElementById("command-dialog");
+  const input = document.getElementById("command-input");
+  renderCommandResults();
+  dialog.showModal();
+  input.value = "";
+  input.focus();
+  state.commandPaletteOpen = true;
+}
+
+function closeCommandPalette() {
+  const dialog = document.getElementById("command-dialog");
+  dialog.close();
+  state.commandPaletteOpen = false;
+}
+
+async function performUndo() {
+  const result = await state.history.undo();
+  if (result) {
+    await loadData();
+    showDashboardToast(t(state.language, "undoDone"));
+  } else {
+    showDashboardToast(t(state.language, "noUndoAvailable"), "info", 2000);
+  }
+}
+
+async function performRedo() {
+  const result = await state.history.redo();
+  if (result) {
+    await loadData();
+    showDashboardToast(t(state.language, "redoDone"));
+  } else {
+    showDashboardToast(t(state.language, "noRedoAvailable"), "info", 2000);
+  }
+}
+
+function calculateStorageStats() {
+  const stats = {
+    totalSize: 0,
+    byCategory: new Map(),
+    byType: { image: 0, video: 0 },
+    topFiles: [],
+    duplicateCount: 0
+  };
+
+  const hashCount = new Map();
+  
+  for (const item of state.items) {
+    stats.totalSize += item.blob.size;
+    
+    const catCount = stats.byCategory.get(item.category) || 0;
+    stats.byCategory.set(item.category, catCount + item.blob.size);
+    
+    stats.byType[item.type] = (stats.byType[item.type] || 0) + item.blob.size;
+    
+    const hash = item.contentHash;
+    if (hash) {
+      hashCount.set(hash, (hashCount.get(hash) || 0) + 1);
+    }
+    
+    stats.topFiles.push({
+      id: item.id,
+      title: item.title || item.pageTitle || "Untitled",
+      size: item.blob.size,
+      type: item.type
+    });
+  }
+  
+  stats.topFiles.sort((a, b) => b.size - a.size);
+  stats.topFiles = stats.topFiles.slice(0, 10);
+  
+  stats.duplicateCount = [...hashCount.values()].filter(count => count > 1).length;
+  
+  return stats;
+}
+
+function renderStoragePanel() {
+  const stats = calculateStorageStats();
+  const dialog = document.getElementById("storage-dialog");
+  
+  const categoryList = [...stats.byCategory.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([cat, size]) => `
+      <div class="storage-row">
+        <span>${t(state.language, cat)}</span>
+        <span>${formatBytes(size)}</span>
+      </div>
+    `).join("");
+  
+  const topFilesList = stats.topFiles.map(file => `
+    <div class="storage-row">
+      <span class="storage-filename">${file.title.slice(0, 30)}</span>
+      <span>${formatBytes(file.size)}</span>
+    </div>
+  `).join("");
+  
+  document.getElementById("storage-content").innerHTML = `
+    <div class="storage-section">
+      <h3>${t(state.language, "totalSize")}</h3>
+      <div class="storage-total">${formatBytes(stats.totalSize)}</div>
+    </div>
+    <div class="storage-section">
+      <h3>${t(state.language, "byType")}</h3>
+      <div class="storage-row">
+        <span>${t(state.language, "tabImage")}</span>
+        <span>${formatBytes(stats.byType.image)}</span>
+      </div>
+      <div class="storage-row">
+        <span>${t(state.language, "tabVideo")}</span>
+        <span>${formatBytes(stats.byType.video)}</span>
+      </div>
+    </div>
+    <div class="storage-section">
+      <h3>${t(state.language, "byCategory")}</h3>
+      ${categoryList}
+    </div>
+    <div class="storage-section">
+      <h3>${t(state.language, "topFiles")}</h3>
+      ${topFilesList}
+    </div>
+    <div class="storage-section">
+      <h3>${t(state.language, "duplicateCount")}</h3>
+      <div class="storage-total">${stats.duplicateCount}</div>
+    </div>
+  `;
+  
+  dialog.showModal();
+}
+
+function renderTagsDialog() {
+  const tagsList = document.getElementById("tags-list");
+  document.getElementById("tags-dialog-title").textContent = t(state.language, "manageTags");
+  
+  tagsList.innerHTML = state.tags.map(tag => `
+    <div class="tag-item">
+      <span class="tag-color" style="background: ${tag.color}"></span>
+      <span class="tag-name">${tag.name}</span>
+      <button class="btn btn-icon btn-ghost tag-delete" data-tag-id="${tag.id}">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+  `).join("");
+  
+  tagsList.querySelectorAll(".tag-delete").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const tagId = btn.dataset.tagId;
+      state.tags = await removeTag(tagId);
+      renderTagsDialog();
+      renderTagChips();
+    });
+  });
+  
+  document.getElementById("tags-dialog").showModal();
+}
+
+async function createNewTag() {
+  const nameInput = document.getElementById("new-tag-name");
+  const colorInput = document.getElementById("new-tag-color");
+  const name = nameInput.value.trim();
+  const color = colorInput.value;
+  
+  if (!name) return;
+  
+  const tag = {
+    id: name.toLowerCase().replace(/\s+/g, "-"),
+    name,
+    color
+  };
+  
+  state.tags = await addTag(tag);
+  nameInput.value = "";
+  renderTagsDialog();
+  renderTagChips();
+}
+
 async function loadData() {
-  const [items, rulesSummary, aiStatus, exportDirectoryHandle, exportDirectoryName, cloudSyncSettings] = await Promise.all([
+  const [items, rulesSummary, aiStatus, exportDirectoryHandle, exportDirectoryName, cloudSyncSettings, tags, collections] = await Promise.all([
     getAllMedia(),
     extensionApi.runtime.sendMessage({ type: "GET_RULES_SUMMARY" }),
     extensionApi.runtime.sendMessage({ type: "GET_AI_STATUS" }).catch(() => ({ ok: false })),
     getMeta("exportDirectoryHandle", null),
     getMeta("exportDirectoryName", ""),
-    getMeta("cloudSyncSettings", createDefaultSyncSettings())
+    getMeta("cloudSyncSettings", createDefaultSyncSettings()),
+    getTags(),
+    getCollections()
   ]);
   state.items = items;
   state.rulesSummary = rulesSummary.ok ? rulesSummary : { categories: [], tokenCount: 0 };
@@ -1291,13 +1851,98 @@ async function loadData() {
   state.exportDirectoryHandle = exportDirectoryHandle;
   state.exportDirectoryName = exportDirectoryName;
   state.syncSettings = mergeSyncSettings(cloudSyncSettings);
+  state.tags = tags;
+  state.collections = collections;
   renderFilters();
   renderSyncSettings();
   renderGrid();
   renderDirectorySummary();
+  renderTagChips();
+  renderCollections();
   document.getElementById("model-provider").textContent = state.aiStatus
     ? t(state.language, "hybridModelReady")
     : t(state.language, "rulesFallbackActive");
+  document.getElementById("tags-panel-title").textContent = t(state.language, "tags");
+  document.getElementById("advanced-filters-label").textContent = t(state.language, "advancedFilters");
+  document.getElementById("date-range-label").textContent = t(state.language, "dateRange");
+  document.getElementById("source-domain-label").textContent = t(state.language, "sourceDomain");
+  document.getElementById("dimensions-label").textContent = t(state.language, "dimensions");
+  document.getElementById("clear-filters-btn").textContent = t(state.language, "clearFilters");
+  document.getElementById("collections-panel-title").textContent = t(state.language, "collections");
+}
+
+function getCollectionItemCount(collection) {
+  if (collection.isSmart && collection.rules) {
+    return evaluateSmartRulesCount(collection.rules);
+  }
+  return collection.items.length;
+}
+
+function evaluateSmartRulesCount(rules) {
+  return state.items.filter(item => {
+    if (rules.category && item.category !== rules.category) return false;
+    if (rules.type && item.type !== rules.type) return false;
+    if (rules.sourceDomain) {
+      try {
+        const url = new URL(item.sourceUrl);
+        if (!url.hostname.includes(rules.sourceDomain)) return false;
+      } catch {
+        return false;
+      }
+    }
+    return true;
+  }).length;
+}
+
+function renderCollections() {
+  const list = document.getElementById("collection-list");
+  
+  if (state.collections.length === 0) {
+    list.innerHTML = `<p class="empty-text">${t(state.language, "noCollections")}</p>`;
+    return;
+  }
+  
+  list.innerHTML = state.collections.map(collection => `
+    <button class="collection-item ${state.selectedCollection === collection.id ? "is-active" : ""}" data-collection="${collection.id}">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
+        ${collection.isSmart 
+          ? '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="9" y1="14" x2="15" y2="14"/>'
+          : '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>'
+        }
+      </svg>
+      <span class="collection-name">${collection.name}</span>
+      <span class="collection-count">${getCollectionItemCount(collection)}</span>
+    </button>
+  `).join("");
+  
+  list.querySelectorAll(".collection-item").forEach(item => {
+    item.addEventListener("click", () => {
+      if (state.selectedCollection === item.dataset.collection) {
+        state.selectedCollection = null;
+      } else {
+        state.selectedCollection = item.dataset.collection;
+      }
+      renderCollections();
+      renderGrid();
+    });
+  });
+}
+
+async function createNewCollection() {
+  const name = prompt(t(state.language, "collectionName"));
+  if (!name) return;
+  
+  const collection = {
+    id: `collection-${Date.now()}`,
+    name,
+    type: "static",
+    items: [],
+    isSmart: false,
+    rules: null
+  };
+  
+  state.collections = await createCollection(collection);
+  renderCollections();
 }
 
 async function bindEvents() {
@@ -1312,6 +1957,52 @@ async function bindEvents() {
     renderGrid();
   });
 
+  document.getElementById("advanced-filters-toggle").addEventListener("click", () => {
+    const panel = document.getElementById("advanced-filters");
+    panel.hidden = !panel.hidden;
+  });
+
+  document.getElementById("date-from").addEventListener("change", (event) => {
+    state.advancedFilters.dateFrom = event.target.value || null;
+    renderGrid();
+  });
+
+  document.getElementById("date-to").addEventListener("change", (event) => {
+    state.advancedFilters.dateTo = event.target.value || null;
+    renderGrid();
+  });
+
+  document.getElementById("source-domain").addEventListener("input", (event) => {
+    state.advancedFilters.sourceDomain = event.target.value.trim();
+    renderGrid();
+  });
+
+  document.getElementById("min-width").addEventListener("input", (event) => {
+    state.advancedFilters.minWidth = event.target.value ? parseInt(event.target.value) : null;
+    renderGrid();
+  });
+
+  document.getElementById("max-width").addEventListener("input", (event) => {
+    state.advancedFilters.maxWidth = event.target.value ? parseInt(event.target.value) : null;
+    renderGrid();
+  });
+
+  document.getElementById("clear-filters-btn").addEventListener("click", () => {
+    state.advancedFilters = {
+      dateFrom: null,
+      dateTo: null,
+      sourceDomain: "",
+      minWidth: null,
+      maxWidth: null
+    };
+    document.getElementById("date-from").value = "";
+    document.getElementById("date-to").value = "";
+    document.getElementById("source-domain").value = "";
+    document.getElementById("min-width").value = "";
+    document.getElementById("max-width").value = "";
+    renderGrid();
+  });
+
   document.querySelectorAll(".tab").forEach((tab) => {
     tab.addEventListener("click", () => {
       state.mediaType = tab.dataset.type;
@@ -1320,7 +2011,7 @@ async function bindEvents() {
     });
   });
 
-  document.getElementById("language-select").addEventListener("change", async (event) => {
+  document.getElementById("language-select-element").addEventListener("change", async (event) => {
     state.language = event.target.value;
     await setLanguage(state.language);
     renderFilters();
@@ -1330,6 +2021,10 @@ async function bindEvents() {
   });
 
   document.getElementById("import-btn").addEventListener("click", () => {
+    document.getElementById("import-input").click();
+  });
+
+  document.getElementById("empty-import-btn")?.addEventListener("click", () => {
     document.getElementById("import-input").click();
   });
 
@@ -1417,6 +2112,10 @@ async function bindEvents() {
     await reclassifyAllItems();
   });
 
+  document.getElementById("create-collection-btn").addEventListener("click", () => {
+    createNewCollection();
+  });
+
   document.getElementById("select-visible-btn").addEventListener("click", () => {
     for (const item of getVisibleItems()) {
       state.selectedIds.add(item.id);
@@ -1444,6 +2143,166 @@ async function bindEvents() {
       event.target.close();
     }
   });
+
+  const shortcutHandler = createShortcutHandler({
+    NavigateUp: () => {
+      state.focusedIndex = -1;
+      navigateGrid("up");
+    },
+    NavigateDown: () => navigateGrid("down"),
+    NavigateLeft: () => navigateGrid("left"),
+    NavigateRight: () => navigateGrid("right"),
+    Preview: () => {
+      if (state.focusedIndex >= 0) {
+        previewFocused();
+      } else {
+        toggleSelectionFocused();
+      }
+    },
+    Export: () => {
+      if (state.focusedIndex >= 0) {
+        exportFocused();
+      } else if (state.selectedIds.size > 0) {
+        const selectedItems = getVisibleItems().filter(i => state.selectedIds.has(i.id));
+        exportSelectedItemsAsZip(selectedItems);
+      }
+    },
+    Delete: () => {
+      if (state.focusedIndex >= 0) {
+        deleteFocused();
+      } else if (state.selectedIds.size > 0) {
+        deleteSelectedItems();
+      }
+    },
+    Category: () => {
+      if (state.focusedIndex >= 0) {
+        cycleCategoryFocused();
+      }
+    },
+    FocusSearch: () => {
+      document.getElementById("search").focus();
+    },
+    Escape: () => {
+      if (state.commandPaletteOpen) {
+        closeCommandPalette();
+      } else if (state.selectedIds.size > 0) {
+        state.selectedIds.clear();
+        renderGrid();
+      } else if (state.focusedIndex >= 0) {
+        state.focusedIndex = -1;
+        renderGrid();
+      }
+    },
+    SelectAll: () => selectAllVisible(),
+    InvertSelection: () => invertSelection(),
+    CommandPalette: () => {
+      openCommandPalette();
+    },
+    Undo: () => performUndo(),
+    Redo: () => performRedo()
+  });
+
+  let lastKeyCombo = "";
+  document.addEventListener("keydown", (event) => {
+    const combo = (event.ctrlKey || event.metaKey ? "ctrl+" : "") + 
+                  (event.shiftKey ? "shift+" : "") + 
+                  (event.altKey ? "alt+" : "") + 
+                  event.key.toLowerCase();
+    
+    if (combo === "ctrl+z" || combo === "cmd+z") {
+      event.preventDefault();
+      performUndo();
+    } else if (combo === "ctrl+shift+z" || combo === "cmd+shift+z" || combo === "ctrl+y" || combo === "cmd+y") {
+      event.preventDefault();
+      performRedo();
+    }
+  });
+
+  document.addEventListener("keydown", shortcutHandler);
+
+  document.getElementById("command-dialog").addEventListener("click", (event) => {
+    if (event.target.nodeName === "DIALOG") {
+      closeCommandPalette();
+    }
+  });
+
+  document.getElementById("storage-open-btn").addEventListener("click", () => {
+    renderStoragePanel();
+  });
+
+  document.getElementById("storage-close-btn").addEventListener("click", () => {
+    document.getElementById("storage-dialog").close();
+  });
+
+  document.getElementById("storage-dialog").addEventListener("click", (event) => {
+    if (event.target.nodeName === "DIALOG") {
+      event.target.close();
+    }
+  });
+
+  document.getElementById("manage-tags-btn").addEventListener("click", () => {
+    renderTagsDialog();
+  });
+
+  document.getElementById("tags-close-btn").addEventListener("click", () => {
+    document.getElementById("tags-dialog").close();
+  });
+
+  document.getElementById("tags-dialog").addEventListener("click", (event) => {
+    if (event.target.nodeName === "DIALOG") {
+      event.target.close();
+    }
+  });
+
+  document.getElementById("add-tag-btn").addEventListener("click", () => {
+    createNewTag();
+  });
+
+  document.getElementById("new-tag-name").addEventListener("keypress", (event) => {
+    if (event.key === "Enter") {
+      createNewTag();
+    }
+  });
+
+  const commandInput = document.getElementById("command-input");
+  commandInput.addEventListener("input", (event) => {
+    renderCommandResults(event.target.value);
+  });
+
+  commandInput.addEventListener("keydown", (event) => {
+    const resultsContainer = document.getElementById("command-results");
+    const items = resultsContainer.querySelectorAll(".command-item");
+    
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      commandSelectedIndex = Math.min(commandSelectedIndex + 1, items.length - 1);
+      updateCommandSelection();
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      commandSelectedIndex = Math.max(commandSelectedIndex - 1, 0);
+      updateCommandSelection();
+    } else if (event.key === "Enter") {
+      event.preventDefault();
+      const selectedItem = items[commandSelectedIndex];
+      if (selectedItem) {
+        selectedItem.click();
+      }
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      closeCommandPalette();
+    }
+  });
+}
+
+function updateCommandSelection() {
+  const resultsContainer = document.getElementById("command-results");
+  const items = resultsContainer.querySelectorAll(".command-item");
+  items.forEach((item, index) => {
+    item.classList.toggle("is-selected", index === commandSelectedIndex);
+  });
+  if (items[commandSelectedIndex]) {
+    items[commandSelectedIndex].scrollIntoView({ block: "nearest" });
+  }
 }
 
 async function main() {

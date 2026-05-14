@@ -12,73 +12,157 @@
       <aside class="rail">
         <div class="rail-brand">
           <img class="brand-icon" src="../assets/logo-mark.svg" alt="MaterialBox logo" />
-          <div>
+          <div class="brand-text">
             <p class="eyebrow">MaterialBox</p>
             <h1 id="title"></h1>
             <p id="subtitle" class="subtitle"></p>
           </div>
         </div>
 
-        <section class="panel stats-panel">
-          <div class="metric-card">
-            <span class="metric-label" id="summary-text"></span>
-            <strong id="summary-total">0</strong>
+        <section class="panel">
+          <div class="panel-header">
+            <span id="summary-text" class="panel-title"></span>
           </div>
-          <div class="metric-card">
-            <span class="metric-label" id="model-summary"></span>
-            <strong id="model-strength">0</strong>
-            <em id="model-provider" class="metric-note"></em>
-          </div>
-        </section>
-
-        <section class="panel rail-tools">
-          <div class="panel-head">
-            <span id="workspace-tools-title">Workspace Tools</span>
-            <span id="workspace-tools-copy" class="panel-caption">Organize, export, refine</span>
-          </div>
-          <button id="smart-classify-btn" class="ghost"></button>
-          <button id="select-visible-btn" class="ghost"></button>
-          <button id="clear-selection-btn" class="ghost"></button>
-          <button id="delete-selected-btn" class="danger"></button>
-          <button id="import-btn" class="ghost"></button>
-          <button id="export-btn" class="primary"></button>
-          <input id="import-input" type="file" accept="image/*,video/*" multiple hidden />
-        </section>
-
-        <section class="panel directory-panel">
-          <div class="panel-head">
-            <span id="export-directory-title">Export Directory</span>
-            <span class="panel-caption" id="directory-summary"></span>
-          </div>
-          <div class="panel-actions">
-            <button id="choose-directory-btn" class="ghost">Choose folder</button>
-            <button id="clear-directory-btn" class="ghost">Clear</button>
+          <div class="stats-grid">
+            <div class="metric-card">
+              <span class="metric-label" id="metric-total-label"></span>
+              <strong class="metric-value" id="summary-total">0</strong>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label" id="model-summary"></span>
+              <strong class="metric-value" id="model-strength">0</strong>
+              <em id="model-provider" class="metric-note"></em>
+            </div>
           </div>
         </section>
 
-        <section class="panel status-panel">
-          <div class="panel-head">
-            <span id="studio-panel-title">Studio</span>
-            <span id="studio-panel-copy" class="panel-caption">Crop, compress, clip</span>
+        <section class="panel">
+          <div class="panel-header">
+            <span id="workspace-tools-title" class="panel-title"></span>
+            <span id="workspace-tools-copy" class="panel-subtitle"></span>
           </div>
-          <p id="studio-panel-hint" class="status-copy">Open any asset to reveal lightweight editing tools without leaving the library.</p>
+          <div class="tools-grid">
+            <button id="smart-classify-btn" class="btn btn-secondary">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
+              </svg>
+              <span></span>
+            </button>
+            <button id="select-visible-btn" class="btn btn-secondary">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <polyline points="9 11 12 14 22 4"></polyline>
+              </svg>
+              <span></span>
+            </button>
+            <button id="clear-selection-btn" class="btn btn-secondary">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="9" y1="9" x2="15" y2="15"></line>
+                <line x1="15" y1="9" x2="9" y2="15"></line>
+              </svg>
+              <span></span>
+            </button>
+            <button id="delete-selected-btn" class="btn btn-danger">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+              <span></span>
+            </button>
+            <button id="import-btn" class="btn btn-secondary">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+              </svg>
+              <span></span>
+            </button>
+            <button id="export-btn" class="btn btn-primary">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              <span></span>
+            </button>
+            <input id="import-input" type="file" accept="image/*,video/*" multiple hidden />
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <span id="export-directory-title" class="panel-title"></span>
+            <span class="panel-subtitle" id="directory-summary"></span>
+          </div>
+          <div class="tools-grid" style="grid-template-columns: repeat(2, 1fr);">
+            <button id="choose-directory-btn" class="btn btn-ghost">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+              </svg>
+              <span></span>
+            </button>
+            <button id="clear-directory-btn" class="btn btn-ghost">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+              <span></span>
+            </button>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <span id="sync-open-btn" class="btn btn-ghost btn-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="17 1 21 5 17 9"></polyline>
+                <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+                <polyline points="7 23 3 19 7 15"></polyline>
+                <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+              </svg>
+              <span></span>
+            </span>
+          </div>
+          <p id="studio-panel-hint" class="subtitle" style="font-size: 12px; color: var(--text-muted);"></p>
+        </section>
+
+        <section class="panel">
+          <button id="storage-open-btn" class="btn btn-ghost btn-sm" style="width: 100%;">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+            </svg>
+            <span id="storage-open-btn-text"></span>
+          </button>
         </section>
       </aside>
 
       <section class="mainboard">
         <header class="hero">
           <div class="hero-top">
-            <div class="toolbar-search">
-              <p id="command-search-label" class="toolbar-label">Command Search</p>
-              <input id="search" type="search" />
+            <div class="search-wrapper">
+              <label class="search-label" id="command-search-label"></label>
+              <div class="search-container">
+                <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input id="search" type="search" class="search-input" />
+              </div>
             </div>
             <div class="hero-actions">
-              <button id="sync-open-btn" class="ghost"></button>
-              <select id="language-select">
-                <option value="en">English</option>
-                <option value="zh">中文</option>
-              </select>
-              <div id="view-pill" class="view-pill">IndexedDB · Local AI Studio</div>
+              <button id="language-select" class="btn btn-ghost" style="min-width: 100px;">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="2" y1="12" x2="22" y2="12"></line>
+                  <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                </svg>
+                <select id="language-select-element" style="background: transparent; border: none; color: inherit; font: inherit; cursor: pointer; outline: none;">
+                  <option value="en">English</option>
+                  <option value="zh">中文</option>
+                </select>
+              </button>
+              <div class="panel-badge" id="view-pill"></div>
             </div>
           </div>
 
@@ -88,43 +172,104 @@
               <button class="tab" data-type="image"></button>
               <button class="tab" data-type="video"></button>
             </nav>
-            <select id="category-filter"></select>
+            <select id="category-filter" class="filter-select"></select>
+            <button id="advanced-filters-toggle" class="btn btn-ghost btn-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 16px; height: 16px;">
+                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+              </svg>
+              <span id="advanced-filters-label"></span>
+            </button>
+          </div>
+          <div id="advanced-filters" class="advanced-filters" hidden>
+            <div class="filter-row">
+              <label class="filter-label" id="date-range-label"></label>
+              <input id="date-from" type="date" class="form-input filter-date" />
+              <span>-</span>
+              <input id="date-to" type="date" class="form-input filter-date" />
+            </div>
+            <div class="filter-row">
+              <label class="filter-label" id="source-domain-label"></label>
+              <input id="source-domain" type="text" class="form-input filter-input" placeholder="example.com" />
+            </div>
+            <div class="filter-row">
+              <label class="filter-label" id="dimensions-label"></label>
+              <input id="min-width" type="number" class="form-input filter-number" placeholder="Min" min="0" />
+              <span>-</span>
+              <input id="max-width" type="number" class="form-input filter-number" placeholder="Max" min="0" />
+            </div>
+            <button id="clear-filters-btn" class="btn btn-secondary btn-sm"></button>
           </div>
 
           <div class="hero-strip">
             <article class="hero-card">
-              <span class="hero-card-label">Visible now</span>
-              <strong id="hero-visible">0</strong>
+              <span class="hero-card-label" id="hero-visible-label"></span>
+              <strong class="hero-card-value" id="hero-visible">0</strong>
               <p id="hero-visible-copy" class="hero-card-copy"></p>
             </article>
             <article class="hero-card">
               <span class="hero-card-label">Images</span>
-              <strong id="hero-images">0</strong>
+              <strong class="hero-card-value" id="hero-images">0</strong>
               <p class="hero-card-copy">Stills, graphics, screenshots</p>
             </article>
             <article class="hero-card">
               <span class="hero-card-label">Videos</span>
-              <strong id="hero-videos">0</strong>
+              <strong class="hero-card-value" id="hero-videos">0</strong>
               <p class="hero-card-copy">Clips, references, motion</p>
             </article>
             <article class="hero-card accent">
               <span class="hero-card-label">Selection</span>
-              <strong id="hero-selection">0</strong>
+              <strong class="hero-card-value" id="hero-selection">0</strong>
               <p id="hero-selection-copy" class="hero-card-copy"></p>
             </article>
           </div>
         </header>
 
-        <section class="panel category-panel">
-          <div class="panel-head">
-            <span id="smart-categories-title">Smart Categories</span>
-            <span class="panel-caption" id="category-summary"></span>
+        <section class="panel">
+          <div class="panel-header">
+            <span id="smart-categories-title" class="panel-title"></span>
+            <span class="panel-subtitle" id="category-summary"></span>
           </div>
           <div id="category-chips" class="category-chips"></div>
         </section>
 
+        <section class="panel">
+          <div class="panel-header">
+            <span class="panel-title" id="tags-panel-title"></span>
+            <button id="manage-tags-btn" class="btn btn-ghost btn-xs">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;">
+                <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+              </svg>
+            </button>
+          </div>
+          <div id="tag-chips" class="tag-chips"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <span class="panel-title" id="collections-panel-title"></span>
+            <button id="create-collection-btn" class="btn btn-ghost btn-xs">+</button>
+          </div>
+          <div id="collection-list" class="collection-list"></div>
+        </section>
+
         <section id="grid" class="grid"></section>
-        <section id="empty" class="empty" hidden></section>
+        <section id="empty" class="empty" hidden>
+          <svg class="empty-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+            <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+            <line x1="12" y1="22.08" x2="12" y2="12"></line>
+          </svg>
+          <h3 class="empty-title">No materials yet</h3>
+          <p class="empty-description">Start capturing images and videos from any webpage.</p>
+          <button id="empty-import-btn" class="btn btn-primary">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+            <span>Import Media</span>
+          </button>
+        </section>
         <p id="feedback" class="feedback" aria-live="polite"></p>
       </section>
     </main>
@@ -133,44 +278,163 @@
       <article id="preview-content"></article>
     </dialog>
 
+    <dialog id="command-dialog" class="dialog command-dialog">
+      <div class="command-palette">
+        <div class="command-input-wrapper">
+          <svg class="command-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input id="command-input" type="text" class="command-input" placeholder="Type a command..." />
+        </div>
+        <div id="command-results" class="command-results"></div>
+        <div class="command-footer">
+          <span class="command-hint">↑↓ Navigate</span>
+          <span class="command-hint">↵ Select</span>
+          <span class="command-hint">Esc Close</span>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog id="storage-dialog" class="dialog storage-dialog">
+      <article class="storage-sheet">
+        <header class="storage-header">
+          <div>
+            <p class="eyebrow">MaterialBox</p>
+            <h2 id="storage-panel-title" class="storage-title"></h2>
+          </div>
+          <button id="storage-close-btn" class="btn btn-icon btn-ghost" aria-label="Close">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </header>
+        <div id="storage-content" class="storage-content"></div>
+      </article>
+    </dialog>
+
+    <dialog id="tags-dialog" class="dialog tags-dialog">
+      <article class="tags-sheet">
+        <header class="tags-header">
+          <h2 id="tags-dialog-title" class="tags-title"></h2>
+          <button id="tags-close-btn" class="btn btn-icon btn-ghost" aria-label="Close">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </header>
+        <div class="tags-content">
+          <div id="tags-list" class="tags-list"></div>
+          <div class="tags-add">
+            <input id="new-tag-name" type="text" class="form-input" placeholder="Tag name..." />
+            <input id="new-tag-color" type="color" class="color-input" value="#3b82f6" />
+            <button id="add-tag-btn" class="btn btn-primary">Add Tag</button>
+          </div>
+        </div>
+      </article>
+    </dialog>
+
     <dialog id="sync-dialog" class="dialog sync-dialog">
       <article class="sync-sheet">
-        <header class="sync-sheet-head">
+        <header class="sync-header">
           <div>
-            <p id="sync-panel-copy" class="studio-kicker">S3 and WebDAV</p>
-            <h2 id="sync-panel-title">Cloud sync</h2>
-            <p id="sync-panel-hint" class="status-copy"></p>
+            <p id="sync-panel-copy" class="eyebrow">S3 and WebDAV</p>
+            <h2 id="sync-panel-title" class="sync-title"></h2>
+            <p id="sync-panel-hint" class="sync-subtitle"></p>
           </div>
-          <button id="sync-close-btn" class="ghost studio-close" aria-label="Close">×</button>
+          <button id="sync-close-btn" class="btn btn-icon btn-ghost" aria-label="Close">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
         </header>
-        <div class="sync-form">
-          <label>
-            <span id="sync-provider-label"></span>
-            <select id="sync-provider-select">
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label" id="sync-provider-label"></label>
+            <select id="sync-provider-select" class="filter-select">
               <option value="none"></option>
               <option value="s3"></option>
               <option value="webdav"></option>
             </select>
-          </label>
+          </div>
           <div id="sync-s3-fields" class="sync-fields" hidden>
-            <label><span id="sync-s3-endpoint-label"></span><input id="sync-s3-endpoint" type="url" placeholder="https://s3.us-east-1.amazonaws.com" /></label>
-            <label><span id="sync-s3-bucket-label"></span><input id="sync-s3-bucket" type="text" /></label>
-            <label><span id="sync-s3-region-label"></span><input id="sync-s3-region" type="text" placeholder="us-east-1" /></label>
-            <label><span id="sync-s3-access-label"></span><input id="sync-s3-access" type="text" autocomplete="off" /></label>
-            <label><span id="sync-s3-secret-label"></span><input id="sync-s3-secret" type="password" autocomplete="off" /></label>
-            <label><span id="sync-s3-prefix-label"></span><input id="sync-s3-prefix" type="text" placeholder="materialbox" /></label>
+            <div class="form-group">
+              <label class="form-label" id="sync-s3-endpoint-label"></label>
+              <input id="sync-s3-endpoint" type="url" class="form-input" placeholder="https://s3.us-east-1.amazonaws.com" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" id="sync-s3-bucket-label"></label>
+              <input id="sync-s3-bucket" type="text" class="form-input" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" id="sync-s3-region-label"></label>
+              <input id="sync-s3-region" type="text" class="form-input" placeholder="us-east-1" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" id="sync-s3-access-label"></label>
+              <input id="sync-s3-access" type="text" class="form-input" autocomplete="off" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" id="sync-s3-secret-label"></label>
+              <input id="sync-s3-secret" type="password" class="form-input" autocomplete="off" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" id="sync-s3-prefix-label"></label>
+              <input id="sync-s3-prefix" type="text" class="form-input" placeholder="materialbox" />
+            </div>
           </div>
           <div id="sync-webdav-fields" class="sync-fields" hidden>
-            <label><span id="sync-webdav-url-label"></span><input id="sync-webdav-url" type="url" placeholder="https://example.com/dav/" /></label>
-            <label><span id="sync-webdav-user-label"></span><input id="sync-webdav-user" type="text" autocomplete="off" /></label>
-            <label><span id="sync-webdav-pass-label"></span><input id="sync-webdav-pass" type="password" autocomplete="off" /></label>
-            <label><span id="sync-webdav-path-label"></span><input id="sync-webdav-path" type="text" placeholder="materialbox" /></label>
+            <div class="form-group">
+              <label class="form-label" id="sync-webdav-url-label"></label>
+              <input id="sync-webdav-url" type="url" class="form-input" placeholder="https://example.com/dav/" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" id="sync-webdav-user-label"></label>
+              <input id="sync-webdav-user" type="text" class="form-input" autocomplete="off" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" id="sync-webdav-pass-label"></label>
+              <input id="sync-webdav-pass" type="password" class="form-input" autocomplete="off" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" id="sync-webdav-path-label"></label>
+              <input id="sync-webdav-path" type="text" class="form-input" placeholder="materialbox" />
+            </div>
           </div>
-          <div class="sync-actions">
-            <button id="sync-save-btn" class="ghost"></button>
-            <button id="sync-test-btn" class="ghost"></button>
-            <button id="sync-upload-btn" class="primary"></button>
-            <button id="sync-download-btn" class="ghost"></button>
+          <div class="form-actions">
+            <button id="sync-save-btn" class="btn btn-secondary">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                <polyline points="7 3 7 8 15 8"></polyline>
+              </svg>
+              <span></span>
+            </button>
+            <button id="sync-test-btn" class="btn btn-ghost">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+              </svg>
+              <span></span>
+            </button>
+            <button id="sync-upload-btn" class="btn btn-primary">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+              </svg>
+              <span></span>
+            </button>
+            <button id="sync-download-btn" class="btn btn-ghost">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              <span></span>
+            </button>
           </div>
         </div>
       </article>
