@@ -1,0 +1,43 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(sed -i '817,823d' src/pages/dashboard.js)",
+      "Bash(sed -i '817s/.*/            <span class=\"studio-chip\">\\\\${item.type === \"video\" ? t\\(state.language, \"tabVideo\"\\) : t\\(state.language, \"tabImage\"\\)}<\\\\/span>\\\\n            <span class=\"studio-chip\">\\\\${formatBytes\\(item.blob.size\\)}<\\\\/span>\\\\n          <\\\\/div>\\\\n          <span>\\\\${t\\(state.language, \"aiCategory\"\\)}: \\\\${t\\(state.language, item.ai?.label ?? \"uncategorized\"\\)} \\(\\\\${Math.round\\(\\(item.ai?.confidence ?? 0\\) * 100\\)}%\\)<\\\\/span>/' src/pages/dashboard.js)",
+      "Bash(grep -n '\\\\${t\\(state.language' src/pages/dashboard.html)",
+      "Bash(git add *)",
+      "Bash(git commit -m 'fix\\(ui\\): resolve duplicate category display and missing studio styles *)",
+      "Bash(sed -i 's/height: fit-content;/height: auto;/' src/pages/dashboard.css)",
+      "Bash(sed -i 's/max-height: calc\\(100vh - 40px\\);//' src/pages/dashboard.css)",
+      "Bash(sed -i 's/overflow-y: auto;/overflow-y: visible;/' src/pages/dashboard.css)",
+      "Bash(git checkout *)",
+      "Bash(python3)",
+      "Bash(sed -i 's/width: 100%;//' src/pages/dashboard.css)",
+      "Bash(sed -i 's/box-sizing: border-box;//' src/pages/dashboard.css)",
+      "Bash(sed -i 's/display: grid !important;/display: grid;/' src/pages/dashboard.css)",
+      "Bash(sed -i 's/visibility: visible !important;//g' src/pages/dashboard.css)",
+      "Bash(sed -i 's/opacity: 1 !important;//g' src/pages/dashboard.css)",
+      "Bash(sed -i 's/display: block !important;/display: block;/' src/pages/dashboard.css)",
+      "Bash(sed -i '/^$/d' src/pages/dashboard.css)",
+      "Bash(sed -n '635,660p' src/pages/dashboard.css)",
+      "Bash(git commit -m 'fix\\(ui\\): resolve mainboard layout issues *)",
+      "Bash(node --input-type=module)",
+      "Bash(sed -i '522s/const _el/const syncNoneOpt/' src/pages/dashboard.js)",
+      "Bash(sed -i '523s/if \\(_el\\)/if \\(syncNoneOpt\\)/' src/pages/dashboard.js)",
+      "Bash(sed -i '523s/_el\\\\.textContent/syncNoneOpt.textContent/' src/pages/dashboard.js)",
+      "Bash(sed -i '524s/const _el/const syncS3Opt/' src/pages/dashboard.js)",
+      "Bash(sed -i '525s/if \\(_el\\)/if \\(syncS3Opt\\)/' src/pages/dashboard.js)",
+      "Bash(sed -i '525s/_el\\\\.textContent/syncS3Opt.textContent/' src/pages/dashboard.js)",
+      "Bash(sed -i '526s/const _el/const syncWebdavOpt/' src/pages/dashboard.js)",
+      "Bash(sed -i '527s/if \\(_el\\)/if \\(syncWebdavOpt\\)/' src/pages/dashboard.js)",
+      "Bash(git commit *)",
+      "Bash(sed -i '1753,1754d' src/pages/dashboard.css)",
+      "Bash(sed -i '1757,1758d' src/pages/dashboard.css)",
+      "Bash(head -n 1752 src/pages/dashboard.css)",
+      "Bash(mv /tmp/dashboard.css.tmp src/pages/dashboard.css)",
+      "Bash(python *)",
+      "Bash(echo \"test\")",
+      "Read(//tmp/**)",
+      "Bash(node *)"
+    ]
+  }
+}

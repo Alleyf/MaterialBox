@@ -119,3 +119,154 @@ export async function getMeta(key, fallbackValue = null) {
     request.onerror = () => reject(request.error);
   });
 }
+
+const DEFAULT_TAGS = [
+  { id: "favorite", name: "Favorite", color: "#f59e0b" },
+  { id: "to-review", name: "To Review", color: "#8b5cf6" },
+  { id: "approved", name: "Approved", color: "#10b981" },
+  { id: "rejected", name: "Rejected", color: "#f43f5e" }
+];
+
+export async function getTags() {
+  const tags = await getMeta("tags", DEFAULT_TAGS);
+  return tags;
+}
+
+export async function saveTags(tags) {
+  await putMeta("tags", tags);
+  return tags;
+}
+
+export async function addTag(tag) {
+  const tags = await getTags();
+  const existingTag = tags.find(t => t.id === tag.id || t.name.toLowerCase() === tag.name.toLowerCase());
+  if (existingTag) {
+    return tags;
+  }
+  tags.push(tag);
+  await saveTags(tags);
+  return tags;
+}
+
+export async function removeTag(tagId) {
+  const tags = await getTags();
+  const filtered = tags.filter(t => t.id !== tagId);
+  await saveTags(filtered);
+  return filtered;
+}
+
+export async function addTagToMedia(mediaId, tagId) {
+  const item = await getMedia(mediaId);
+  if (!item) return null;
+  if (!item.tags) {
+    item.tags = [];
+  }
+  if (!item.tags.includes(tagId)) {
+    item.tags.push(tagId);
+    await putMedia(item);
+  }
+  return item;
+}
+
+export async function removeTagFromMedia(mediaId, tagId) {
+  const item = await getMedia(mediaId);
+  if (!item) return null;
+  if (item.tags) {
+    item.tags = item.tags.filter(t => t !== tagId);
+    await putMedia(item);
+  }
+  return item;
+}
+
+export async function getMediaByTag(tagId) {
+  const allMedia = await getAllMedia();
+  return allMedia.filter(item => item.tags && item.tags.includes(tagId));
+}
+
+const DEFAULT_COLLECTIONS = [
+  { id: "favorites", name: "Favorites", type: "static", items: [], isSmart: false, rules: null }
+];
+
+export async function getCollections() {
+  const collections = await getMeta("collections", DEFAULT_COLLECTIONS);
+  return collections;
+}
+
+export async function saveCollections(collections) {
+  await putMeta("collections", collections);
+  return collections;
+}
+
+export async function createCollection(collection) {
+  const collections = await getCollections();
+  collections.push(collection);
+  await saveCollections(collections);
+  return collections;
+}
+
+export async function updateCollection(collectionId, updates) {
+  const collections = await getCollections();
+  const index = collections.findIndex(c => c.id === collectionId);
+  if (index !== -1) {
+    collections[index] = { ...collections[index], ...updates };
+    await saveCollections(collections);
+  }
+  return collections;
+}
+
+export async function deleteCollection(collectionId) {
+  const collections = await getCollections();
+  const filtered = collections.filter(c => c.id !== collectionId);
+  await saveCollections(filtered);
+  return filtered;
+}
+
+export async function addToCollection(collectionId, mediaId) {
+  const collections = await getCollections();
+  const collection = collections.find(c => c.id === collectionId);
+  if (collection && !collection.items.includes(mediaId)) {
+    collection.items.push(mediaId);
+    await saveCollections(collections);
+  }
+  return collections;
+}
+
+export async function removeFromCollection(collectionId, mediaId) {
+  const collections = await getCollections();
+  const collection = collections.find(c => c.id === collectionId);
+  if (collection) {
+    collection.items = collection.items.filter(id => id !== mediaId);
+    await saveCollections(collections);
+  }
+  return collections;
+}
+
+export async function getCollectionItems(collectionId, allMedia) {
+  const collections = await getCollections();
+  const collection = collections.find(c => c.id === collectionId);
+  if (!collection) return [];
+  
+  if (collection.isSmart && collection.rules) {
+    return evaluateSmartRules(collection.rules, allMedia);
+  }
+  
+  return allMedia.filter(item => collection.items.includes(item.id));
+}
+
+function evaluateSmartRules(rules, allMedia) {
+  return allMedia.filter(item => {
+    if (rules.category && item.category !== rules.category) return false;
+    if (rules.type && item.type !== rules.type) return false;
+    if (rules.sourceDomain) {
+      try {
+        const url = new URL(item.sourceUrl);
+        if (!url.hostname.includes(rules.sourceDomain)) return false;
+      } catch {
+        return false;
+      }
+    }
+    if (rules.minWidth && item.width < rules.minWidth) return false;
+    if (rules.maxWidth && item.width > rules.maxWidth) return false;
+    return true;
+  });
+}

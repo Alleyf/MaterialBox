@@ -8,27 +8,49 @@
   </head>
   <body>
     <main class="popup">
-      <header class="hero">
-        <div class="hero-row">
-          <img class="brand-icon" src="../assets/logo-mark.svg" alt="MaterialBox logo" />
-          <div>
-            <p class="eyebrow">MaterialBox</p>
-            <h1 id="popup-title"></h1>
-            <p id="popup-copy" class="hero-copy">Local-first capture, instant AI sorting, export-ready studio.</p>
-          </div>
-        </div>
-        <div class="hero-panel">
-          <div>
-            <span>Local AI</span>
-            <strong id="ai-status">Loading...</strong>
-          </div>
-          <div class="hero-badge">Smart Save</div>
+      <header class="header fade-in">
+        <img class="brand-icon" src="../assets/logo-mark.svg" alt="MaterialBox logo" />
+        <div class="header-text">
+          <p class="eyebrow">MaterialBox</p>
+          <h1 id="popup-title"></h1>
+          <p id="popup-copy" class="header-description">Local-first capture, instant AI sorting, export-ready studio.</p>
         </div>
       </header>
-      <section class="stats" id="stats"></section>
-      <section class="actions">
-        <button id="open-library" class="primary"></button>
-        <button id="save-page"></button>
+
+      <div class="status-card fade-in stagger-1" id="ai-status-card">
+        <div class="status-icon ai-loading" id="ai-status-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M12 6v6l4 2"></path>
+          </svg>
+        </div>
+        <div class="status-content">
+          <p class="status-label">Local AI</p>
+          <p class="status-value" id="ai-status">Loading...</p>
+        </div>
+        <div class="status-badge">Smart</div>
+      </div>
+
+      <section class="stats-grid fade-in stagger-2" id="stats"></section>
+
+      <section class="actions fade-in stagger-3">
+        <button id="open-library" class="btn btn-primary">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7"></rect>
+            <rect x="14" y="3" width="7" height="7"></rect>
+            <rect x="14" y="14" width="7" height="7"></rect>
+            <rect x="3" y="14" width="7" height="7"></rect>
+          </svg>
+          <span id="open-library-text"></span>
+        </button>
+        <button id="save-page" class="btn btn-secondary">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          <span id="save-page-text"></span>
+        </button>
       </section>
     </main>
     <script type="module" src="./popup.js"></script>

@@ -175,6 +175,10 @@ function safeQuery(el, selector) {
   return target;
 }
 
+function safeQueryAll(el, selector) {
+  return [...el.querySelectorAll(selector)];
+}
+
 function createPreviewUrl(item) {
   return URL.createObjectURL(item.blob);
 }
@@ -558,6 +562,14 @@ if (syncWebdavOpt) syncWebdavOpt.textContent = t(state.language, "syncWebdav");
     ? `${t(state.language, "deleteSelected")} (${selectionCount})`
     : t(state.language, "deleteSelected"));
 
+  const addToCollectionBtn = document.getElementById("add-to-collection-btn");
+  if (addToCollectionBtn) {
+    addToCollectionBtn.hidden = selectionCount === 0;
+    addToCollectionBtn.querySelector("span").textContent = selectionCount
+      ? `Add to Collection (${selectionCount})`
+      : "Add to Collection";
+  }
+
   tabs.forEach((tab) => {
     tab.classList.toggle("is-active", tab.dataset.type === state.mediaType);
   });
@@ -846,6 +858,16 @@ function renderPreview(item) {
           <span>${t(state.language, "savedAt")}: ${formatDate(item.createdAt, state.language)}</span>
           <a href="${item.pageUrl}" target="_blank" rel="noreferrer">${t(state.language, "sourcePage")}</a>
           <a href="${item.sourceUrl}" target="_blank" rel="noreferrer">${t(state.language, "sourceMedia")}</a>
+          <div class="studio-tags">
+            <span class="studio-tags-label">Tags:</span>
+            <div class="studio-tag-list" id="studio-tag-list">
+              ${(item.tags ?? []).map(tagId => {
+                const tag = state.tags.find(t => t.id === tagId);
+                return tag ? `<span class="studio-tag-chip" style="--tag-color: ${tag.color}">${tag.name}<button class="studio-tag-remove" data-tag-id="${tagId}">x</button></span>` : "";
+              }).join("")}
+            </div>
+            <button id="add-tag-to-item-btn" class="btn btn-sm btn-ghost">+ Add Tag</button>
+          </div>
         </div>
       </section>
       <aside class="studio-side">
@@ -879,6 +901,22 @@ function renderPreview(item) {
     setFeedback(message);
     showDashboardToast(message);
     dialog.close();
+  });
+
+  // Tag management in preview dialog
+  const studioTagList = document.getElementById("studio-tag-list");
+  studioTagList.querySelectorAll(".studio-tag-remove").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const tagId = btn.dataset.tagId;
+      await removeTagFromMedia(item.id, tagId);
+      await loadData();
+      dialog.close();
+      showDashboardToast("Tag removed");
+    });
+  });
+
+  document.getElementById("add-tag-to-item-btn").addEventListener("click", () => {
+    showTagPickerDialog(item, dialog);
   });
 
   if (item.type === "image") {
@@ -1199,7 +1237,6 @@ async function chooseExportDirectory() {
   });
   state.exportDirectoryHandle = handle;
   state.exportDirectoryName = handle.name;
-  await putMeta("exportDirectoryHandle", handle);
   await putMeta("exportDirectoryName", handle.name);
   renderDirectorySummary();
   const message = t(state.language, "directorySet", { name: handle.name });
@@ -1391,18 +1428,7 @@ function renderGrid() {
           <span>${t(state.language, "size")}: ${formatBytes(item.blob.size)}</span>
           <span>${t(state.language, "savedAt")}: ${formatDate(item.createdAt, state.language)}</span>
           <a href="${item.pageUrl || item.sourceUrl}" target="_blank" rel="noreferrer">${item.pageTitle || item.sourceUrl}</a>
-        </div>
-        <div class="card-footer">
-          <button class="btn btn-sm btn-secondary" data-action="preview">${t(state.language, "preview")}</button>
-          <div class="card-actions">
-            <button class="btn btn-sm btn-icon btn-ghost" data-action="export" title="${t(state.language, "exportItem")}">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-            </button>
-            <button class="btn btn-sm btn-icon btn-danger" data-action="delete" title="${t(state.language, "deleteItem")}">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-            </button>
-          </div>
-        </div>
+        </div></div>
       </div>
     `;
 
@@ -1421,11 +1447,11 @@ function renderGrid() {
       renderPreview(item);
     });
     safeQuery(card, ".card-title").addEventListener("click", () => renderPreview(item));
-    safeQuery(card, '[data-action="preview"]').addEventListener("click", () => renderPreview(item));
-    safeQuery(card, '[data-action="export"]').addEventListener("click", async () => {
+    safeQuery(card, '[data-action="preview"]').addEventListener("click", (e) => { e.stopPropagation(); renderPreview(item); });
+    safeQuery(card, '[data-action="export"]').addEventListener("click", async (e) => { e.stopPropagation();
       await exportBlobFromPage(item.blob, buildItemFilename(item));
     });
-    safeQuery(card, '[data-action="delete"]').addEventListener("click", async () => deleteItem(item.id));
+    safeQuery(card, '[data-action="delete"]').addEventListener("click", async (e) => { e.stopPropagation(); await deleteItem(item.id); });
     safeQuery(card, ".badge").addEventListener("click", async (event) => {
       event.stopPropagation();
       const options = getCategoryOptions(state.language);
@@ -1807,6 +1833,69 @@ function renderStoragePanel() {
   
   dialog.showModal();
 }
+async function showCollectionPickerDialog(mediaIds, previewDialog) {
+  const collectionPicker = document.getElementById("collection-picker-dialog");
+  const collectionPickerList = document.getElementById("collection-picker-list");
+  
+  if (state.collections.length === 0) {
+    showDashboardToast("No collections yet", "info");
+    return;
+  }
+  
+  collectionPickerList.innerHTML = state.collections.map(col => `
+    <button class="tag-picker-item" data-collection-id="${col.id}">
+      <span class="tag-name">${col.name}</span>
+      <span class="tag-count">${col.items.length} items</span>
+    </button>
+  `).join("");
+  
+  collectionPickerList.querySelectorAll(".tag-picker-item").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const collectionId = btn.dataset.collectionId;
+      for (const mediaId of mediaIds) {
+        await addToCollection(collectionId, mediaId);
+      }
+      await loadData();
+      collectionPicker.close();
+      if (previewDialog) previewDialog.close();
+      showDashboardToast(`Added ${mediaIds.length} item(s) to collection`);
+    });
+  });
+  
+  collectionPicker.showModal();
+}
+
+async function showTagPickerDialog(item, previewDialog) {
+  const tagPicker = document.getElementById("tag-picker-dialog");
+  const tagPickerList = document.getElementById("tag-picker-list");
+  
+  const availableTags = state.tags.filter(tag => !(item.tags ?? []).includes(tag.id));
+  
+  if (availableTags.length === 0) {
+    showDashboardToast("No more tags available", "info");
+    return;
+  }
+  
+  tagPickerList.innerHTML = availableTags.map(tag => `
+    <button class="tag-picker-item" data-tag-id="${tag.id}">
+      <span class="tag-color" style="background: ${tag.color}"></span>
+      <span class="tag-name">${tag.name}</span>
+    </button>
+  `).join("");
+  
+  tagPickerList.querySelectorAll(".tag-picker-item").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const tagId = btn.dataset.tagId;
+      await addTagToMedia(item.id, tagId);
+      await loadData();
+      tagPicker.close();
+      previewDialog.close();
+      showDashboardToast("Tag added");
+    });
+  });
+  
+  tagPicker.showModal();
+}
 
 function renderTagsDialog() {
   const tagsList = document.getElementById("tags-list");
@@ -2155,6 +2244,23 @@ async function bindEvents() {
     await deleteSelectedItems();
   });
 
+  document.getElementById("add-to-collection-btn").addEventListener("click", async () => {
+    const selectedIds = [...state.selectedIds];
+    if (selectedIds.length > 0) {
+      showCollectionPickerDialog(selectedIds, null);
+    }
+  });
+
+  document.getElementById("collection-picker-close-btn").addEventListener("click", () => {
+    document.getElementById("collection-picker-dialog").close();
+  });
+
+  document.getElementById("collection-picker-dialog").addEventListener("click", (event) => {
+    if (event.target.nodeName === "DIALOG") {
+      event.target.close();
+    }
+  });
+
   document.getElementById("preview-dialog").addEventListener("click", (event) => {
     if (event.target.nodeName === "DIALOG") {
       event.target.close();
@@ -2274,6 +2380,16 @@ async function bindEvents() {
   document.getElementById("tags-dialog").addEventListener("click", (event) => {
     if (event.target.nodeName === "DIALOG") {
       event.target.close();
+
+  document.getElementById("tag-picker-close-btn").addEventListener("click", () => {
+    document.getElementById("tag-picker-dialog").close();
+  });
+
+  document.getElementById("tag-picker-dialog").addEventListener("click", (event) => {
+    if (event.target.nodeName === "DIALOG") {
+      event.target.close();
+    }
+  });
     }
   });
 

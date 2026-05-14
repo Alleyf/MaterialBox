@@ -69,12 +69,35 @@ jobs:
           name: browser-packages
           path: dist
 
+      - name: Extract changelog for this release
+        id: changelog
+        run: |
+          TAG_VERSION=${GITHUB_REF#refs/tags/v}
+          echo "Extracting changelog for version: $TAG_VERSION"
+          
+          # Extract the section for this version from CHANGELOG.md
+          CHANGELOG_CONTENT=$(awk -v version="v$TAG_VERSION" '
+            /^## \[v/ {
+              if (section_found) exit
+              if ($0 ~ version) {
+                section_found=1
+                next
+              }
+            }
+            section_found && /^## \[v/ { exit }
+            section_found { print }
+          ' CHANGELOG.md)
+          
+          # Save to a temporary file
+          echo "$CHANGELOG_CONTENT" > release_notes.md
+          echo "changelog_file=release_notes.md" >> $GITHUB_OUTPUT
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
             dist/materialbox-chrome.zip
             dist/materialbox-firefox.zip
-          generate_release_notes: true
+          body_path: ${{ steps.changelog.outputs.changelog_file }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

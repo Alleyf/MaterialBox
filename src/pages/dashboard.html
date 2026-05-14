@@ -70,6 +70,12 @@
               </svg>
               <span></span>
             </button>
+            <button id="add-to-collection-btn" class="btn btn-secondary" hidden>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+              </svg>
+              <span>Add to Collection</span>
+            </button>
             <button id="import-btn" class="btn btn-secondary">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -121,9 +127,10 @@
                 <polyline points="7 23 3 19 7 15"></polyline>
                 <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
               </svg>
-              <span></span>
+              <span id="studio-panel-title"></span>
             </span>
           </div>
+          <p id="studio-panel-copy" class="subtitle" style="font-size: 12px; color: var(--text-muted);"></p>
           <p id="studio-panel-hint" class="subtitle" style="font-size: 12px; color: var(--text-muted);"></p>
         </section>
 
@@ -332,6 +339,40 @@
             <input id="new-tag-color" type="color" class="color-input" value="#3b82f6" />
             <button id="add-tag-btn" class="btn btn-primary">Add Tag</button>
           </div>
+        </div>
+      </article>
+    </dialog>
+
+    <dialog id="tag-picker-dialog" class="dialog tag-picker-dialog">
+      <article class="tags-sheet">
+        <header class="tags-header">
+          <h2 class="tags-title">Add Tag</h2>
+          <button id="tag-picker-close-btn" class="btn btn-icon btn-ghost" aria-label="Close">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </header>
+        <div class="tags-content">
+          <div id="tag-picker-list" class="tags-list"></div>
+        </div>
+      </article>
+    </dialog>
+
+    <dialog id="collection-picker-dialog" class="dialog collection-picker-dialog">
+      <article class="tags-sheet">
+        <header class="tags-header">
+          <h2 class="tags-title">Add to Collection</h2>
+          <button id="collection-picker-close-btn" class="btn btn-icon btn-ghost" aria-label="Close">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </header>
+        <div class="tags-content">
+          <div id="collection-picker-list" class="tags-list"></div>
         </div>
       </article>
     </dialog>

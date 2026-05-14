@@ -629,8 +629,8 @@ body {
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 12px;
   padding: 4px;
   width: 100%;
   min-height: 200px;
@@ -766,7 +766,7 @@ body {
 }
 
 .card-body {
-  padding: 14px;
+  padding: 10px;
 }
 
 .card-topline {
@@ -889,7 +889,7 @@ body {
   padding: 0;
   border: none;
   border-radius: var(--radius-2xl);
-  overflow: visible;
+  overflow: auto;
   box-shadow: var(--shadow-xl);
   background: transparent;
   position: fixed;
@@ -1277,7 +1277,9 @@ body {
   background: var(--bg-secondary);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-xl);
-  overflow: hidden;
+  max-height: 70vh;
+  overflow-y: auto;
+  
 }
 
 .tags-header {
@@ -1746,4 +1748,84 @@ body {
   .studio {
     grid-template-columns: 1fr;
   }
+}
+
+
+/* Ensure hidden attribute works */
+[hidden] {
+  display: none !important;
+}
+
+/* Studio tags */
+.studio-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.studio-tags-label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.studio-tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.studio-tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--tag-color, #3b82f6);
+  color: white;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.studio-tag-remove {
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  padding: 0;
+  font-size: 14px;
+  line-height: 1;
+  opacity: 0.8;
+}
+
+.studio-tag-remove:hover {
+  opacity: 1;
+}
+
+/* Tag picker */
+.tag-picker-item,
+.collection-picker-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-align: left;
+}
+
+.tag-picker-item:hover,
+.collection-picker-item:hover {
+  background: var(--bg-hover);
+}
+
+.tag-count {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-muted);
 }
