@@ -1414,7 +1414,7 @@ function renderGrid() {
       }
       renderPreview(item);
     });
-    card.querySelector(".title").addEventListener("click", () => renderPreview(item));
+    card.querySelector(".card-title").addEventListener("click", () => renderPreview(item));
     card.querySelector('[data-action="preview"]').addEventListener("click", () => renderPreview(item));
     card.querySelector('[data-action="export"]').addEventListener("click", async () => {
       await exportBlobFromPage(item.blob, buildItemFilename(item));
