@@ -565,9 +565,9 @@ if (syncWebdavOpt) syncWebdavOpt.textContent = t(state.language, "syncWebdav");
   const addToCollectionBtn = document.getElementById("add-to-collection-btn");
   if (addToCollectionBtn) {
     addToCollectionBtn.hidden = selectionCount === 0;
-    addToCollectionBtn.querySelector("span").textContent = selectionCount
-      ? `Add to Collection (${selectionCount})`
-      : "Add to Collection";
+    safeSet("add-to-collection-btn-text", selectionCount
+      ? `${t(state.language, "addToCollection")} (${selectionCount})`
+      : t(state.language, "addToCollection"));
   }
 
   tabs.forEach((tab) => {
@@ -587,6 +587,7 @@ if (_el2) _el2.textContent = t(state.language, "tabVideo");
     )
   ].join("");
   categoryFilter.value = state.category;
+  safeSet("collection-picker-title", t(state.language, "addToCollection"));
 }
 
 function renderSyncSettings() {
