@@ -1,4 +1,4 @@
-import { getAllMedia, getMeta, putMedia, putMeta, getTags, addTag, removeTag, addTagToMedia, removeTagFromMedia, getCollections, createCollection, updateCollection, deleteCollection, addToCollection, removeFromCollection, getCollectionItems } from "../lib/db.js";
+import { getAllMedia, getMeta, putMedia, putMeta, getTags, addTag, removeTag, updateTag, addTagToMedia, removeTagFromMedia, getCollections, createCollection, updateCollection, deleteCollection, addToCollection, removeFromCollection, getCollectionItems, getAllPrompts, putPrompt, deletePrompt } from "../lib/db.js";
 import { createLazyLoader } from "../lib/lazyload.js";
 import { inferCategory } from "../lib/classifier.js";
 import { getCategoryOptions, getLanguage, setLanguage, t } from "../lib/i18n.js";
@@ -33,7 +33,10 @@ const state = {
     maxWidth: null
   },
   collections: [],
-  selectedCollection: null
+  selectedCollection: null,
+  prompts: [],
+  promptSearch: "",
+  editingPrompt: null
 };
 
 function createDefaultSyncSettings() {
@@ -579,6 +582,8 @@ if (_el0) _el0.textContent = t(state.language, "tabAll");
 if (_el1) _el1.textContent = t(state.language, "tabImage");
   const _el2 = document.querySelector('[data-type="video"]');
 if (_el2) _el2.textContent = t(state.language, "tabVideo");
+  const _el3 = document.querySelector('[data-type="prompts"]');
+if (_el3) _el3.textContent = t(state.language, "promptsTab");
 
   categoryFilter.innerHTML = [
     `<option value="all">${t(state.language, "allCategories")}</option>`,
@@ -588,6 +593,8 @@ if (_el2) _el2.textContent = t(state.language, "tabVideo");
   ].join("");
   categoryFilter.value = state.category;
   safeSet("collection-picker-title", t(state.language, "addToCollection"));
+  safeSet("prompt-search-label", t(state.language, "searchPlaceholder"));
+  safeSet("add-prompt-btn-text", t(state.language, "addPrompt"));
 }
 
 function renderSyncSettings() {
@@ -690,9 +697,243 @@ function renderTagChips() {
   });
 }
 
+function getFilteredPrompts() {
+  const needle = state.promptSearch.trim().toLowerCase();
+  if (!needle) return state.prompts;
+  return state.prompts.filter(p =>
+    p.title?.toLowerCase().includes(needle) ||
+    p.content?.toLowerCase().includes(needle) ||
+    p.sourceUrl?.toLowerCase().includes(needle)
+  );
+}
+
+function renderPromptsPanel() {
+  const grid = document.getElementById("grid");
+  const empty = document.getElementById("empty");
+  const promptsPanel = document.getElementById("prompts-panel");
+
+  if (grid) grid.innerHTML = "";
+  if (empty) empty.hidden = true;
+  if (promptsPanel) promptsPanel.hidden = false;
+
+  const filtered = getFilteredPrompts();
+  const list = document.getElementById("prompts-list");
+  const emptyEl = document.getElementById("prompts-empty");
+
+  if (!state.prompts.length) {
+    list.innerHTML = "";
+    if (emptyEl) {
+      emptyEl.hidden = false;
+      const emptyTitle = document.getElementById("prompts-empty-title");
+      const emptyDesc = document.getElementById("prompts-empty-desc");
+      if (emptyTitle) emptyTitle.textContent = t(state.language, "noPrompts");
+      if (emptyDesc) emptyDesc.textContent = isZh()
+        ? "使用右键菜单保存提示词，或按 P 键快速保存。"
+        : "Save prompts from context menu or press P to quick save.";
+    }
+    return;
+  }
+
+  if (emptyEl) emptyEl.hidden = true;
+
+  list.innerHTML = filtered.map(prompt => `
+    <article class="prompt-card" data-prompt-id="${prompt.id}">
+      <div class="prompt-card-header">
+        <h3 class="prompt-card-title">${escapeHtml(prompt.title || (isZh() ? "无标题" : "Untitled"))}</h3>
+        <span class="prompt-card-date">${formatDate(prompt.createdAt, state.language)}</span>
+      </div>
+      <div class="prompt-card-content">${truncateHtml(prompt.content, 200)}</div>
+      ${prompt.sourceUrl ? `<a class="prompt-card-source" href="${escapeHtml(prompt.sourceUrl)}" target="_blank" rel="noreferrer">${escapeHtml(new URL(prompt.sourceUrl).hostname)}</a>` : ''}
+      <div class="prompt-card-actions">
+        <button class="prompt-action-btn" data-action="copy" title="${t(state.language, "copyPrompt")}">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+        </button>
+        <button class="prompt-action-btn" data-action="edit" title="${t(state.language, "editPrompt")}">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+        </button>
+        <button class="prompt-action-btn prompt-action-delete" data-action="delete" title="${t(state.language, "deletePrompt")}">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+        </button>
+      </div>
+    </article>
+  `).join("");
+
+  list.querySelectorAll(".prompt-card").forEach(card => {
+    const promptId = card.dataset.promptId;
+    card.querySelector('[data-action="copy"]')?.addEventListener("click", () => copyPrompt(promptId));
+    card.querySelector('[data-action="edit"]')?.addEventListener("click", () => editPrompt(promptId));
+    card.querySelector('[data-action="delete"]')?.addEventListener("click", () => deletePromptById(promptId));
+    card.addEventListener("click", (e) => {
+      if (!e.target.closest(".prompt-action-btn")) {
+        showPromptPreview(promptId);
+      }
+    });
+  });
+}
+
+function isInputFocused() {
+  const el = document.activeElement;
+  return el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT");
+}
+
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function truncateHtml(html, maxLength) {
+  // Create a temporary element to parse HTML
+  const temp = document.createElement("div");
+  temp.innerHTML = html;
+  const plainText = temp.innerText || temp.textContent || "";
+  if (plainText.length <= maxLength) {
+    return html;
+  }
+  // Truncate plain text and wrap with ellipsis, but also close any open tags
+  return `<p>${escapeHtml(plainText.slice(0, maxLength))}...</p>`;
+}
+
+function isZh() {
+  return state.language === "zh";
+}
+
+async function copyPrompt(promptId) {
+  const prompt = state.prompts.find(p => p.id === promptId);
+  if (!prompt) return;
+  // Strip HTML tags for plain text copy
+  const tempDiv = document.createElement("div");
+  tempDiv.innerHTML = prompt.content;
+  const plainText = tempDiv.innerText || tempDiv.textContent || "";
+  await navigator.clipboard.writeText(plainText);
+  showDashboardToast(t(state.language, "promptCopied"));
+}
+
+function editPrompt(promptId) {
+  const prompt = state.prompts.find(p => p.id === promptId);
+  if (!prompt) return;
+  state.editingPrompt = prompt;
+  showPromptDialog(prompt);
+}
+
+async function deletePromptById(promptId) {
+  if (!confirm(t(state.language, "confirmDeletePrompt"))) return;
+  await extensionApi.runtime.sendMessage({ type: "DELETE_PROMPT", id: promptId });
+  await loadData();
+  showDashboardToast(t(state.language, "promptDeleted"));
+}
+
+function showPromptPreview(promptId) {
+  const prompt = state.prompts.find(p => p.id === promptId);
+  if (!prompt) return;
+
+  state.editingPrompt = prompt;
+
+  const dialog = document.getElementById("prompt-preview-dialog");
+  const titleEl = document.getElementById("prompt-preview-title");
+  const contentEl = document.getElementById("prompt-preview-content");
+  const sourceEl = document.getElementById("prompt-preview-source");
+  const copyText = document.getElementById("prompt-preview-copy-text");
+  const editText = document.getElementById("prompt-preview-edit-text");
+  const deleteText = document.getElementById("prompt-preview-delete-text");
+
+  if (titleEl) titleEl.textContent = prompt.title || (isZh() ? "无标题" : "Untitled");
+  if (contentEl) contentEl.textContent = prompt.content;
+  if (sourceEl) {
+    if (prompt.sourceUrl) {
+      sourceEl.innerHTML = `<a href="${escapeHtml(prompt.sourceUrl)}" target="_blank" rel="noreferrer">${escapeHtml(prompt.sourceUrl)}</a>`;
+      sourceEl.hidden = false;
+    } else {
+      sourceEl.hidden = true;
+    }
+  }
+  if (copyText) copyText.textContent = t(state.language, "copyPrompt");
+  if (editText) editText.textContent = t(state.language, "editPrompt");
+  if (deleteText) deleteText.textContent = t(state.language, "deletePrompt");
+
+  dialog.showModal();
+}
+
+function showPromptDialog(prompt = null) {
+  const dialog = document.getElementById("prompt-dialog");
+  const titleEl = document.getElementById("prompt-dialog-title");
+  const titleInput = document.getElementById("prompt-title-input");
+  const contentInput = document.getElementById("prompt-content-input");
+  const contentPreview = document.getElementById("prompt-content-preview");
+  const sourceInput = document.getElementById("prompt-source-input");
+  const saveText = document.querySelector("#prompt-save-btn span");
+  const cancelText = document.querySelector("#prompt-cancel-btn span");
+
+  // Reset preview state
+  if (contentInput) {
+    contentInput.innerHTML = prompt?.content || "";
+    contentInput.hidden = false;
+  }
+  if (contentPreview) {
+    contentPreview.hidden = true;
+  }
+
+  if (titleEl) titleEl.textContent = prompt ? t(state.language, "editPrompt") : t(state.language, "addPrompt");
+  if (titleInput) titleInput.value = prompt?.title || "";
+  if (sourceInput) sourceInput.value = prompt?.sourceUrl || "";
+  if (saveText) saveText.textContent = t(state.language, "save");
+  if (cancelText) cancelText.textContent = t(state.language, "cancel");
+
+  dialog.showModal();
+}
+
+async function savePromptFromDialog() {
+  const titleInput = document.getElementById("prompt-title-input");
+  const contentInput = document.getElementById("prompt-content-input");
+  const sourceInput = document.getElementById("prompt-source-input");
+
+  const content = contentInput?.innerHTML?.trim();
+  const plainText = contentInput?.innerText?.trim() || "";
+  if (!plainText) {
+    showDashboardToast(isZh() ? "内容不能为空" : "Content is required", "error");
+    return;
+  }
+
+  const promptData = {
+    title: titleInput?.value?.trim() || plainText.slice(0, 30),
+    content,
+    sourceUrl: sourceInput?.value?.trim() || "",
+    tags: state.editingPrompt?.tags || [],
+    updatedAt: Date.now()
+  };
+
+  if (state.editingPrompt?.id) {
+    promptData.id = state.editingPrompt.id;
+    promptData.createdAt = state.editingPrompt.createdAt;
+    await extensionApi.runtime.sendMessage({ type: "UPDATE_PROMPT", id: promptData.id, updates: promptData });
+  } else {
+    promptData.id = crypto.randomUUID();
+    promptData.createdAt = Date.now();
+    await extensionApi.runtime.sendMessage({ type: "SAVE_PROMPT", prompt: promptData });
+  }
+
+  document.getElementById("prompt-dialog").close();
+  state.editingPrompt = null;
+  await loadData();
+  showDashboardToast(t(state.language, "promptSaved"));
+}
+
 function renderHeader(visibleItems) {
   const imageCount = state.items.filter((item) => item.type === "image").length;
   const videoCount = state.items.filter((item) => item.type === "video").length;
+
+  if (state.mediaType === "prompts") {
+    setText("title", t(state.language, "promptsTab"));
+    setText("subtitle", "");
+    setText("summary-text", `${state.prompts.length} ${t(state.language, "promptsTab")}`);
+    setText("summary-total", String(state.prompts.length));
+    setText("hero-visible", String(state.prompts.length));
+    setText("hero-images", String(state.prompts.length));
+    setText("hero-videos", "");
+    setText("hero-selection", "");
+    return;
+  }
+
   const activeType = state.mediaType === "all"
     ? t(state.language, "tabAll")
     : state.mediaType === "image"
@@ -751,17 +992,17 @@ function renderPreview(item) {
       <h3>${t(state.language, "imageStudio")}</h3>
       <p>${t(state.language, "previewToolsCopy")}</p>
       <div class="studio-form">
-        <div class="studio-preview-split">
-          <div class="studio-preview-card studio-preview-original">
-            <span class="studio-preview-label">${t(state.language, "cropEditor")}</span>
+        <div class="studio-preview-unified">
+          <div class="studio-editor-wrap">
             <div id="image-editor-stage" class="image-editor-stage">
-              <img id="image-editor-image" src="${previewUrl}" alt="" />
+              <canvas id="image-editor-canvas"></canvas>
             </div>
-            <span class="studio-note">${t(state.language, "dragCropHint")}</span>
+            <p class="studio-note">${t(state.language, "dragCropHint")}</p>
           </div>
-          <div class="studio-preview-card studio-preview-processed">
+          <div class="studio-preview-bar">
             <span class="studio-preview-label">${t(state.language, "processedPreview")}</span>
             <img id="image-preview-result" alt="" />
+            <span id="crop-info" class="studio-preview-label" style="margin-left:auto;"></span>
           </div>
         </div>
         <label>
@@ -924,8 +1165,6 @@ function renderPreview(item) {
 
   if (item.type === "image") {
     let previewRequest = 0;
-    let processedImageUrl = null;
-    let processedImage = null;
     let previewTimer = null;
     const imageInputs = [
       document.getElementById("image-aspect"),
@@ -935,14 +1174,18 @@ function renderPreview(item) {
       document.getElementById("image-zoom")
     ];
     const editorStage = document.getElementById("image-editor-stage");
-    const editorImage = document.getElementById("image-editor-image");
+    const canvas = document.getElementById("image-editor-canvas");
+    const ctx = canvas.getContext("2d");
     const imageEditorState = {
       zoom: 1,
       focalX: 0.5,
-      focalY: 0.5,
-      displayWidth: 0,
-      displayHeight: 0
+      focalY: 0.5
     };
+    let sourceImage = null;
+    let processedBlob = null;
+    let processedMimeType = "image/webp";
+    let processedImageUrl = null;
+    let processedImage = null;
 
     const getImageOptions = () => ({
       aspectRatio: document.getElementById("image-aspect").value,
@@ -957,48 +1200,86 @@ function renderPreview(item) {
       imageEditorState.focalY = Math.max(0, Math.min(imageEditorState.focalY, 1));
     };
 
-    const syncImageEditorView = () => {
-      const sourceWidth = editorImage.naturalWidth || item.width || 1;
-      const sourceHeight = editorImage.naturalHeight || item.height || 1;
-      const aspectRatio = parseAspectRatio(document.getElementById("image-aspect").value) ?? (sourceWidth / sourceHeight);
-      editorStage.style.aspectRatio = String(aspectRatio);
-      const stageWidth = editorStage.clientWidth || 320;
-      const stageHeight = editorStage.clientHeight || Math.max(220, Math.round(stageWidth / aspectRatio));
-      const baseScale = Math.max(stageWidth / sourceWidth, stageHeight / sourceHeight);
+    const renderCropPreview = () => {
+      if (!sourceImage) return;
+      const aspectRatio = parseAspectRatio(document.getElementById("image-aspect").value) ?? (sourceImage.width / sourceImage.height);
+      const stageWidth = canvas.clientWidth || 320;
+      const stageHeight = canvas.clientHeight || Math.max(220, Math.round(stageWidth / aspectRatio));
+      canvas.width = stageWidth;
+      canvas.height = stageHeight;
       const zoom = Math.max(1, Number(document.getElementById("image-zoom").value) || 1);
       imageEditorState.zoom = zoom;
-      const displayWidth = sourceWidth * baseScale * zoom;
-      const displayHeight = sourceHeight * baseScale * zoom;
-      imageEditorState.displayWidth = displayWidth;
-      imageEditorState.displayHeight = displayHeight;
       clampEditorFocal();
 
-      let left = stageWidth / 2 - imageEditorState.focalX * displayWidth;
-      let top = stageHeight / 2 - imageEditorState.focalY * displayHeight;
-      const minLeft = Math.min(0, stageWidth - displayWidth);
-      const minTop = Math.min(0, stageHeight - displayHeight);
-      left = Math.min(0, Math.max(minLeft, left));
-      top = Math.min(0, Math.max(minTop, top));
+      // Calculate display rect for source image
+      const imgScale = Math.max(stageWidth / sourceImage.width, stageHeight / sourceImage.height) * zoom;
+      const imgW = sourceImage.width * imgScale;
+      const imgH = sourceImage.height * imgScale;
+      const imgX = stageWidth / 2 - imageEditorState.focalX * imgW;
+      const imgY = stageHeight / 2 - imageEditorState.focalY * imgH;
 
-      editorImage.style.width = `${displayWidth}px`;
-      editorImage.style.height = `${displayHeight}px`;
-      editorImage.style.left = `${left}px`;
-      editorImage.style.top = `${top}px`;
+      // Draw original image
+      ctx.clearRect(0, 0, stageWidth, stageHeight);
+      ctx.drawImage(sourceImage, imgX, imgY, imgW, imgH);
+
+      // Calculate crop box centered on focal point
+      const cropW = Math.min(stageWidth * 0.85, imgW);
+      const cropH = cropW / aspectRatio;
+      const cropX = stageWidth / 2 - cropW / 2;
+      const cropY = stageHeight / 2 - cropH / 2;
+
+      // Draw crop overlay outside the box
+      ctx.fillStyle = "rgba(0,0,0,0.4)";
+      ctx.fillRect(0, 0, stageWidth, cropY);
+      ctx.fillRect(0, cropY, cropX, cropH);
+      ctx.fillRect(cropX + cropW, cropY, stageWidth - cropX - cropW, cropH);
+      ctx.fillRect(0, cropY + cropH, stageWidth, stageHeight - cropY - cropH);
+
+      // Draw crop border
+      ctx.strokeStyle = "#3b82f6";
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 4]);
+      ctx.strokeRect(cropX, cropY, cropW, cropH);
+      ctx.setLineDash([]);
+
+      // Draw center crosshair
+      ctx.strokeStyle = "rgba(255,255,255,0.5)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(stageWidth / 2, cropY);
+      ctx.lineTo(stageWidth / 2, cropY + cropH);
+      ctx.moveTo(cropX, stageHeight / 2);
+      ctx.lineTo(cropX + cropW, stageHeight / 2);
+      ctx.stroke();
+
+      // Draw crop preview inside box if available
+      if (processedImage) {
+        ctx.drawImage(processedImage, cropX, cropY, cropW, cropH);
+        const info = document.getElementById("crop-info");
+        if (info) info.textContent = processedImage.width + " x " + processedImage.height;
+      }
     };
 
     const refreshImagePreview = async () => {
-      const requestId = ++previewRequest;
       setFeedback(t(state.language, "studioSaving"));
       const nextProcessed = await processImageVariant(item, getImageOptions());
-      if (requestId !== previewRequest) {
-        return;
+      processedBlob = nextProcessed.blob;
+      processedMimeType = nextProcessed.mimeType || "image/webp";
+      if (processedImage) {
+        processedImage.close();
       }
-      processedImage = nextProcessed;
+      processedImage = await createImageBitmap(processedBlob);
       if (processedImageUrl) {
         URL.revokeObjectURL(processedImageUrl);
       }
-      processedImageUrl = URL.createObjectURL(nextProcessed.blob);
-      document.getElementById("image-preview-result").src = processedImageUrl;
+      processedImageUrl = URL.createObjectURL(processedBlob);
+      const previewImg = document.getElementById("image-preview-result");
+      if (previewImg) {
+        previewImg.src = processedImageUrl;
+      }
+      const info = document.getElementById("crop-info");
+      if (info) info.textContent = processedImage.width + " x " + processedImage.height;
+      renderCropPreview();
       setFeedback("");
     };
 
@@ -1011,19 +1292,25 @@ function renderPreview(item) {
 
     for (const input of imageInputs) {
       input.addEventListener("input", () => {
-        syncImageEditorView();
+        renderCropPreview();
         scheduleImagePreviewRefresh();
       });
       input.addEventListener("change", () => {
-        syncImageEditorView();
+        renderCropPreview();
         scheduleImagePreviewRefresh();
       });
     }
 
-    editorImage.addEventListener("load", () => {
-      syncImageEditorView();
+    sourceImage = new Image();
+    sourceImage.onload = () => {
+      void renderCropPreview();
       void refreshImagePreview();
-    }, { once: true });
+    };
+    if (sourceImage.complete) {
+      void renderCropPreview();
+      void refreshImagePreview();
+    }
+    sourceImage.src = previewUrl;
 
     let dragPointerId = null;
     let lastPointerX = 0;
@@ -1045,10 +1332,10 @@ function renderPreview(item) {
       const deltaY = event.clientY - lastPointerY;
       lastPointerX = event.clientX;
       lastPointerY = event.clientY;
-      imageEditorState.focalX -= deltaX / Math.max(imageEditorState.displayWidth, 1);
-      imageEditorState.focalY -= deltaY / Math.max(imageEditorState.displayHeight, 1);
+      imageEditorState.focalX -= deltaX / Math.max(canvas.width, 1);
+      imageEditorState.focalY -= deltaY / Math.max(canvas.height, 1);
       clampEditorFocal();
-      syncImageEditorView();
+      renderCropPreview();
       scheduleImagePreviewRefresh();
     });
 
@@ -1070,32 +1357,26 @@ function renderPreview(item) {
       const currentZoom = Number(zoomInput.value) || 1;
       const nextZoom = Math.max(1, Math.min(4, currentZoom + (event.deltaY > 0 ? -0.08 : 0.08)));
       zoomInput.value = nextZoom.toFixed(2);
-      syncImageEditorView();
+      renderCropPreview();
       scheduleImagePreviewRefresh();
     }, { passive: false });
 
-    if (editorImage.complete) {
-      syncImageEditorView();
-      void refreshImagePreview();
-    }
+    
 
     document.getElementById("image-export-btn").addEventListener("click", async () => {
       setFeedback(t(state.language, "studioSaving"));
-      const processed = processedImage ?? await processImageVariant(item, getImageOptions());
-      await exportBlobFromPage(processed.blob, buildItemFilename(item, "edited").replace(/\.\w+$/, processed.mimeType === "image/png" ? ".png" : processed.mimeType === "image/jpeg" ? ".jpg" : ".webp"));
+      const result = processedBlob ? { blob: processedBlob, mimeType: processedMimeType } : await processImageVariant(item, getImageOptions());
+      await exportBlobFromPage(result.blob, buildItemFilename(item, "edited").replace(/.w+$/, result.mimeType === "image/png" ? ".png" : result.mimeType === "image/jpeg" ? ".jpg" : ".webp"));
     });
 
     document.getElementById("image-save-btn").addEventListener("click", async () => {
       setFeedback(t(state.language, "studioSaving"));
-      const processed = processedImage ?? await processImageVariant(item, getImageOptions());
-      await saveDerivedItem(processed.blob, item, "edited", processed.mimeType, "image");
+      const result = processedBlob ? { blob: processedBlob, mimeType: processedMimeType } : await processImageVariant(item, getImageOptions());
+      await saveDerivedItem(result.blob, item, "edited", result.mimeType, "image");
     });
 
     dialog.addEventListener("close", () => {
       clearTimeout(previewTimer);
-      if (processedImageUrl) {
-        URL.revokeObjectURL(processedImageUrl);
-      }
     }, { once: true });
   }
 
@@ -1373,12 +1654,20 @@ async function reclassifyAllItems() {
 }
 
 function renderGrid() {
+  if (state.mediaType === "prompts") {
+    renderPromptsPanel();
+    return;
+  }
+
   const visibleItems = getVisibleItems();
   renderHeader(visibleItems);
   renderCategoryChips();
   renderFilters();
   const grid = document.getElementById("grid");
   const empty = document.getElementById("empty");
+  const promptsPanel = document.getElementById("prompts-panel");
+
+  if (promptsPanel) promptsPanel.hidden = true;
 
   if (!visibleItems.length) {
     grid.innerHTML = "";
@@ -1431,7 +1720,7 @@ function renderGrid() {
           <span>${t(state.language, "size")}: ${formatBytes(item.blob.size)}</span>
           <span>${t(state.language, "savedAt")}: ${formatDate(item.createdAt, state.language)}</span>
           <a href="${item.pageUrl || item.sourceUrl}" target="_blank" rel="noreferrer">${item.pageTitle || item.sourceUrl}</a>
-        </div></div>
+        </div>
       </div>
     `;
 
@@ -1906,9 +2195,16 @@ function renderTagsDialog() {
   safeSet("tags-dialog-title", t(state.language, "manageTags"));
   
   tagsList.innerHTML = state.tags.map(tag => `
-    <div class="tag-item">
+    <div class="tag-item" data-tag-id="${tag.id}">
       <span class="tag-color" style="background: ${tag.color}"></span>
-      <span class="tag-name">${tag.name}</span>
+      <span class="tag-name-display">${tag.name}</span>
+      <input class="tag-name-input" type="text" value="${tag.name}" hidden />
+      <input class="tag-color-input" type="color" value="${tag.color}" hidden />
+      <button class="btn btn-icon btn-ghost tag-edit" data-tag-id="${tag.id}">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+        </svg>
+      </button>
       <button class="btn btn-icon btn-ghost tag-delete" data-tag-id="${tag.id}">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -1918,6 +2214,49 @@ function renderTagsDialog() {
     </div>
   `).join("");
   
+  tagsList.querySelectorAll(".tag-edit").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const tagItem = btn.closest(".tag-item");
+      const nameDisplay = tagItem.querySelector(".tag-name-display");
+      const nameInput = tagItem.querySelector(".tag-name-input");
+      const colorInput = tagItem.querySelector(".tag-color-input");
+      nameDisplay.hidden = true;
+      nameInput.hidden = false;
+      colorInput.hidden = false;
+      nameInput.focus();
+
+      const saveTag = async () => {
+        const tagId = tagItem.dataset.tagId;
+        const newName = nameInput.value.trim();
+        const newColor = colorInput.value;
+        if (newName) {
+          await updateTag(tagId, { name: newName, color: newColor });
+          state.tags = await getTags(state.language);
+          renderTagsDialog();
+          renderTagChips();
+        }
+      };
+
+      nameInput.addEventListener("blur", (e) => {
+        // Don't save if focus is moving to the color input in the same tag item
+        const relatedTarget = e.relatedTarget;
+        if (relatedTarget && tagItem.contains(relatedTarget)) {
+          return;
+        }
+        saveTag();
+      });
+      nameInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          nameInput.blur();
+        } else if (e.key === "Escape") {
+          nameInput.value = nameDisplay.textContent;
+          nameInput.blur();
+        }
+      });
+    });
+  });
+
   tagsList.querySelectorAll(".tag-delete").forEach(btn => {
     btn.addEventListener("click", async () => {
       const tagId = btn.dataset.tagId;
@@ -1951,15 +2290,16 @@ async function createNewTag() {
 }
 
 async function loadData() {
-  const [items, rulesSummary, aiStatus, exportDirectoryHandle, exportDirectoryName, cloudSyncSettings, tags, collections] = await Promise.all([
+  const [items, rulesSummary, aiStatus, exportDirectoryHandle, exportDirectoryName, cloudSyncSettings, tags, collections, promptsResult] = await Promise.all([
     getAllMedia(),
     extensionApi.runtime.sendMessage({ type: "GET_RULES_SUMMARY" }),
     extensionApi.runtime.sendMessage({ type: "GET_AI_STATUS" }).catch(() => ({ ok: false })),
     getMeta("exportDirectoryHandle", null),
     getMeta("exportDirectoryName", ""),
     getMeta("cloudSyncSettings", createDefaultSyncSettings()),
-    getTags(),
-    getCollections()
+    getTags(state.language),
+    getCollections(),
+    extensionApi.runtime.sendMessage({ type: "GET_PROMPTS" }).catch(() => ({ ok: false, prompts: [] }))
   ]);
   state.items = items;
   state.rulesSummary = rulesSummary.ok ? rulesSummary : { categories: [], tokenCount: 0 };
@@ -1969,6 +2309,7 @@ async function loadData() {
   state.syncSettings = mergeSyncSettings(cloudSyncSettings);
   state.tags = tags;
   state.collections = collections;
+  state.prompts = promptsResult.ok ? promptsResult.prompts : [];
   renderFilters();
   renderSyncSettings();
   renderGrid();
@@ -1985,6 +2326,8 @@ async function loadData() {
   safeSet("dimensions-label", t(state.language, "dimensions"));
   safeSet("clear-filters-btn", t(state.language, "clearFilters"));
   safeSet("collections-panel-title", t(state.language, "collections"));
+  safeSet("prompt-search-label", t(state.language, "searchPlaceholder"));
+  safeSet("add-prompt-btn-text", t(state.language, "addPrompt"));
 }
 
 function getCollectionItemCount(collection) {
@@ -2019,20 +2362,36 @@ function renderCollections() {
   }
   
   list.innerHTML = state.collections.map(collection => `
-    <button class="collection-item ${state.selectedCollection === collection.id ? "is-active" : ""}" data-collection="${collection.id}">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
-        ${collection.isSmart 
-          ? '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="9" y1="14" x2="15" y2="14"/>'
-          : '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>'
-        }
-      </svg>
-      <span class="collection-name">${collection.name}</span>
-      <span class="collection-count">${getCollectionItemCount(collection)}</span>
-    </button>
+    <div class="collection-item-wrap" data-collection="${collection.id}">
+      <button class="collection-item ${state.selectedCollection === collection.id ? "is-active" : ""}" data-collection="${collection.id}">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
+          ${collection.isSmart 
+            ? '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="9" y1="14" x2="15" y2="14"/>'
+            : '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>'
+          }
+        </svg>
+        <span class="collection-name">${collection.name}</span>
+        <span class="collection-count">${getCollectionItemCount(collection)}</span>
+      </button>
+      <div class="collection-actions">
+        <button class="btn btn-icon btn-ghost collection-edit" data-collection="${collection.id}" title="Edit">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+          </svg>
+        </button>
+        <button class="btn btn-icon btn-ghost collection-delete" data-collection="${collection.id}" title="Delete">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
   `).join("");
   
   list.querySelectorAll(".collection-item").forEach(item => {
-    item.addEventListener("click", () => {
+    item.addEventListener("click", (e) => {
+      if (e.target.closest(".collection-actions")) return;
       if (state.selectedCollection === item.dataset.collection) {
         state.selectedCollection = null;
       } else {
@@ -2040,6 +2399,35 @@ function renderCollections() {
       }
       renderCollections();
       renderGrid();
+    });
+  });
+
+  list.querySelectorAll(".collection-edit").forEach(btn => {
+    btn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      const collectionId = btn.dataset.collection;
+      const collection = state.collections.find(c => c.id === collectionId);
+      if (!collection) return;
+      const newName = prompt(t(state.language, "collectionName"), collection.name);
+      if (newName && newName.trim()) {
+        state.collections = await updateCollection(collectionId, { name: newName.trim() });
+        renderCollections();
+      }
+    });
+  });
+
+  list.querySelectorAll(".collection-delete").forEach(btn => {
+    btn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      const collectionId = btn.dataset.collection;
+      if (confirm(t(state.language, "confirmDeleteCollection"))) {
+        state.collections = await deleteCollection(collectionId);
+        if (state.selectedCollection === collectionId) {
+          state.selectedCollection = null;
+        }
+        renderCollections();
+        renderGrid();
+      }
     });
   });
 }
@@ -2122,6 +2510,21 @@ async function bindEvents() {
   document.querySelectorAll(".tab").forEach((tab) => {
     tab.addEventListener("click", () => {
       state.mediaType = tab.dataset.type;
+      if (tab.dataset.type === "prompts") {
+        const categoryFilter = document.getElementById("category-filter");
+        const advancedFiltersToggle = document.getElementById("advanced-filters-toggle");
+        const heroBottom = document.querySelector(".hero-bottom");
+        if (categoryFilter) categoryFilter.hidden = true;
+        if (advancedFiltersToggle) advancedFiltersToggle.hidden = true;
+        if (heroBottom) heroBottom.hidden = true;
+      } else {
+        const categoryFilter = document.getElementById("category-filter");
+        const advancedFiltersToggle = document.getElementById("advanced-filters-toggle");
+        const heroBottom = document.querySelector(".hero-bottom");
+        if (categoryFilter) categoryFilter.hidden = false;
+        if (advancedFiltersToggle) advancedFiltersToggle.hidden = false;
+        if (heroBottom) heroBottom.hidden = false;
+      }
       renderFilters();
       renderGrid();
     });
@@ -2337,17 +2740,21 @@ async function bindEvents() {
 
   let lastKeyCombo = "";
   document.addEventListener("keydown", (event) => {
-    const combo = (event.ctrlKey || event.metaKey ? "ctrl+" : "") + 
-                  (event.shiftKey ? "shift+" : "") + 
-                  (event.altKey ? "alt+" : "") + 
+    const combo = (event.ctrlKey || event.metaKey ? "ctrl+" : "") +
+                  (event.shiftKey ? "shift+" : "") +
+                  (event.altKey ? "alt+" : "") +
                   event.key.toLowerCase();
-    
+
     if (combo === "ctrl+z" || combo === "cmd+z") {
       event.preventDefault();
       performUndo();
     } else if (combo === "ctrl+shift+z" || combo === "cmd+shift+z" || combo === "ctrl+y" || combo === "cmd+y") {
       event.preventDefault();
       performRedo();
+    } else if (event.key === "p" && !isModifierKey(event) && !isInputFocused()) {
+      event.preventDefault();
+      state.editingPrompt = null;
+      showPromptDialog();
     }
   });
 
@@ -2404,6 +2811,100 @@ async function bindEvents() {
   document.getElementById("new-tag-name").addEventListener("keypress", (event) => {
     if (event.key === "Enter") {
       createNewTag();
+    }
+  });
+
+  // Prompts panel events
+  document.getElementById("prompt-search")?.addEventListener("input", (event) => {
+    state.promptSearch = event.target.value;
+    renderPromptsPanel();
+  });
+
+  document.getElementById("add-prompt-btn")?.addEventListener("click", () => {
+    state.editingPrompt = null;
+    showPromptDialog();
+  });
+
+  document.getElementById("prompt-dialog-close-btn")?.addEventListener("click", () => {
+    document.getElementById("prompt-dialog").close();
+    state.editingPrompt = null;
+  });
+
+  document.getElementById("prompt-cancel-btn")?.addEventListener("click", () => {
+    document.getElementById("prompt-dialog").close();
+    state.editingPrompt = null;
+  });
+
+  document.getElementById("prompt-save-btn")?.addEventListener("click", () => {
+    void savePromptFromDialog();
+  });
+
+  document.getElementById("prompt-dialog")?.addEventListener("click", (event) => {
+    if (event.target.nodeName === "DIALOG") {
+      event.target.close();
+      state.editingPrompt = null;
+    }
+  });
+
+  document.getElementById("prompt-preview-close-btn")?.addEventListener("click", () => {
+    document.getElementById("prompt-preview-dialog").close();
+  });
+
+  document.getElementById("prompt-preview-copy-btn")?.addEventListener("click", () => {
+    if (state.editingPrompt) {
+      // Strip HTML tags for plain text copy
+      const tempDiv = document.createElement("div");
+      tempDiv.innerHTML = state.editingPrompt.content;
+      const plainText = tempDiv.innerText || tempDiv.textContent || "";
+      void navigator.clipboard.writeText(plainText);
+      showDashboardToast(t(state.language, "promptCopied"));
+    }
+  });
+
+  // Prompt editor toolbar events
+  document.querySelectorAll(".prompt-editor-btn[data-command]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const command = btn.dataset.command;
+      document.execCommand(command, false, null);
+      const contentInput = document.getElementById("prompt-content-input");
+      contentInput?.focus();
+    });
+  });
+
+  document.getElementById("prompt-preview-toggle")?.addEventListener("click", () => {
+    const contentInput = document.getElementById("prompt-content-input");
+    const contentPreview = document.getElementById("prompt-content-preview");
+    if (contentInput && contentPreview) {
+      if (contentInput.hidden) {
+        // Switch to edit mode
+        contentInput.hidden = false;
+        contentPreview.hidden = true;
+      } else {
+        // Switch to preview mode
+        contentPreview.innerHTML = contentInput.innerHTML;
+        contentInput.hidden = true;
+        contentPreview.hidden = false;
+      }
+    }
+  });
+
+  document.getElementById("prompt-preview-edit-btn")?.addEventListener("click", () => {
+    document.getElementById("prompt-preview-dialog").close();
+    if (state.editingPrompt) {
+      editPrompt(state.editingPrompt.id);
+    }
+  });
+
+  document.getElementById("prompt-preview-delete-btn")?.addEventListener("click", () => {
+    document.getElementById("prompt-preview-dialog").close();
+    if (state.editingPrompt) {
+      void deletePromptById(state.editingPrompt.id);
+    }
+  });
+
+  document.getElementById("prompt-preview-dialog")?.addEventListener("click", (event) => {
+    if (event.target.nodeName === "DIALOG") {
+      event.target.close();
     }
   });
 

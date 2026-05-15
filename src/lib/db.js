@@ -1,5 +1,5 @@
 const DB_NAME = "materialbox-db";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 function openDatabase() {
   return new Promise((resolve, reject) => {
@@ -25,6 +25,10 @@ function openDatabase() {
       }
       if (!db.objectStoreNames.contains("meta")) {
         db.createObjectStore("meta", { keyPath: "key" });
+      }
+      if (!db.objectStoreNames.contains("prompts")) {
+        const promptsStore = db.createObjectStore("prompts", { keyPath: "id" });
+        promptsStore.createIndex("createdAt", "createdAt");
       }
     };
     request.onsuccess = () => resolve(request.result);
@@ -120,15 +124,23 @@ export async function getMeta(key, fallbackValue = null) {
   });
 }
 
-const DEFAULT_TAGS = [
+const DEFAULT_TAGS_EN = [
   { id: "favorite", name: "Favorite", color: "#f59e0b" },
   { id: "to-review", name: "To Review", color: "#8b5cf6" },
   { id: "approved", name: "Approved", color: "#10b981" },
   { id: "rejected", name: "Rejected", color: "#f43f5e" }
 ];
 
-export async function getTags() {
-  const tags = await getMeta("tags", DEFAULT_TAGS);
+const DEFAULT_TAGS_ZH = [
+  { id: "favorite", name: "收藏", color: "#f59e0b" },
+  { id: "to-review", name: "待审核", color: "#8b5cf6" },
+  { id: "approved", name: "已批准", color: "#10b981" },
+  { id: "rejected", name: "已拒绝", color: "#f43f5e" }
+];
+
+export async function getTags(language = "en") {
+  const defaultTags = language === "zh" ? DEFAULT_TAGS_ZH : DEFAULT_TAGS_EN;
+  const tags = await getMeta("tags", defaultTags);
   return tags;
 }
 
@@ -153,6 +165,16 @@ export async function removeTag(tagId) {
   const filtered = tags.filter(t => t.id !== tagId);
   await saveTags(filtered);
   return filtered;
+}
+
+export async function updateTag(tagId, updates) {
+  const tags = await getTags();
+  const index = tags.findIndex(t => t.id === tagId);
+  if (index !== -1) {
+    tags[index] = { ...tags[index], ...updates };
+    await saveTags(tags);
+  }
+  return tags;
 }
 
 export async function addTagToMedia(mediaId, tagId) {
@@ -269,4 +291,50 @@ function evaluateSmartRules(rules, allMedia) {
     if (rules.maxWidth && item.width > rules.maxWidth) return false;
     return true;
   });
+}
+
+// Prompt functions
+export async function putPrompt(prompt) {
+  await withStore("prompts", "readwrite", (store) => {
+    store.put(prompt);
+  });
+  return prompt;
+}
+
+export async function getPrompt(id) {
+  const db = await openDatabase();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction("prompts", "readonly");
+    const request = transaction.objectStore("prompts").get(id);
+    request.onsuccess = () => resolve(request.result ?? null);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+export async function getAllPrompts() {
+  const db = await openDatabase();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction("prompts", "readonly");
+    const request = transaction.objectStore("prompts").getAll();
+    request.onsuccess = () => {
+      const items = request.result ?? [];
+      items.sort((left, right) => right.createdAt - left.createdAt);
+      resolve(items);
+    };
+    request.onerror = () => reject(request.error);
+  });
+}
+
+export async function deletePrompt(id) {
+  await withStore("prompts", "readwrite", (store) => {
+    store.delete(id);
+  });
+}
+
+export async function updatePrompt(id, updates) {
+  const prompt = await getPrompt(id);
+  if (!prompt) return null;
+  const updated = { ...prompt, ...updates, updatedAt: Date.now() };
+  await putPrompt(updated);
+  return updated;
 }

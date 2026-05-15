@@ -3,6 +3,7 @@ import { handleCaptureActiveTabMedia, handleSaveFromContextMenu } from "./handle
 import { handleDeleteMedia, handleDeleteMediaBatch, handleExportMedia, handleExportMediaZip, handleUpdateCategory } from "./handlers/library-handler.js";
 import { handleSyncUpload, handleSyncDownload, handleSyncTest } from "./handlers/sync-handler.js";
 import { handleGetStats, handleGetRulesSummary, handleGetAiStatus } from "./handlers/stats-handler.js";
+import { handleSavePrompt, handleGetPrompts, handleGetPrompt, handleDeletePrompt, handleUpdatePrompt } from "./handlers/prompts-handler.js";
 
 const handlers = {
   GET_STATS: handleGetStats,
@@ -16,7 +17,12 @@ const handlers = {
   GET_AI_STATUS: handleGetAiStatus,
   SYNC_UPLOAD: handleSyncUpload,
   SYNC_DOWNLOAD: handleSyncDownload,
-  SYNC_TEST: handleSyncTest
+  SYNC_TEST: handleSyncTest,
+  SAVE_PROMPT: handleSavePrompt,
+  GET_PROMPTS: handleGetPrompts,
+  GET_PROMPT: handleGetPrompt,
+  DELETE_PROMPT: handleDeletePrompt,
+  UPDATE_PROMPT: handleUpdatePrompt
 };
 
 export function createMessageRouter() {

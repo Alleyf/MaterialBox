@@ -210,7 +210,23 @@ const DICTIONARY = {
     addToCollection: "Add to collection",
     removeFromCollection: "Remove from collection",
     noCollections: "No collections",
-    collectionItems: "items"
+    collectionItems: "items",
+    confirmDeleteCollection: "Delete this collection?",
+    promptsTab: "Prompts",
+    savePrompt: "Save Prompt",
+    quickSavePrompt: "Quick Save Prompt",
+    addPrompt: "Add Prompt",
+    editPrompt: "Edit Prompt",
+    deletePrompt: "Delete Prompt",
+    promptTitle: "Title",
+    promptContent: "Content",
+    promptSource: "Source",
+    noPrompts: "No prompts saved yet",
+    promptSaved: "Prompt saved",
+    promptDeleted: "Prompt deleted",
+    promptCopied: "Copied to clipboard",
+    promptPlaceholder: "Enter your prompt here...",
+    confirmDeletePrompt: "Delete this prompt?"
   },
   zh: {
     appName: "MaterialBox",
@@ -421,7 +437,23 @@ const DICTIONARY = {
     addToCollection: "添加到收藏夹",
     removeFromCollection: "从收藏夹移除",
     noCollections: "暂无收藏夹",
-    collectionItems: "个项目"
+    collectionItems: "个项目",
+    confirmDeleteCollection: "确定删除此收藏夹？",
+    promptsTab: "提示词",
+    savePrompt: "保存提示词",
+    quickSavePrompt: "快捷保存提示词",
+    addPrompt: "添加提示词",
+    editPrompt: "编辑提示词",
+    deletePrompt: "删除提示词",
+    promptTitle: "标题",
+    promptContent: "内容",
+    promptSource: "来源",
+    noPrompts: "暂无保存的提示词",
+    promptSaved: "提示词已保存",
+    promptDeleted: "提示词已删除",
+    promptCopied: "已复制到剪贴板",
+    promptPlaceholder: "在此输入提示词...",
+    confirmDeletePrompt: "确定删除此提示词？"
   }
 };
 

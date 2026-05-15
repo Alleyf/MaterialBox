@@ -9,13 +9,13 @@ function ensureToastStyles(doc) {
   style.id = TOAST_STYLE_ID;
   style.textContent = `
     .materialbox-toast-host {
-      position: fixed;
-      top: 24px;
-      right: 24px;
-      z-index: 2147483647;
+      position: fixed !important;
+      top: 24px !important;
+      right: 24px !important;
       display: grid;
       gap: 12px;
       pointer-events: none;
+      z-index: 2147483647;
     }
 
     .materialbox-toast {
@@ -94,9 +94,9 @@ function ensureToastStyles(doc) {
 
     @media (max-width: 720px) {
       .materialbox-toast-host {
-        top: 16px;
-        right: 16px;
-        left: 16px;
+        top: 16px !important;
+        right: 16px !important;
+        left: 16px !important;
       }
 
       .materialbox-toast {
@@ -114,10 +114,12 @@ function ensureToastHost(doc) {
   if (host) {
     return host;
   }
-  host = doc.createElement("div");
-  host.className = "materialbox-toast-host";
-  doc.documentElement.append(host);
-  return host;
+  // Use dialog element so toast enters top layer (above showModal dialogs)
+  const dialog = doc.createElement("dialog");
+  dialog.className = "materialbox-toast-host";
+  dialog.style.cssText = "position:fixed;top:24px;right:24px;background:transparent;border:none;pointer-events:none;margin:0;padding:0;";
+  doc.documentElement.appendChild(dialog);
+  return dialog;
 }
 
 export function showToast({
@@ -140,13 +142,26 @@ export function showToast({
     </div>
     <div class="materialbox-toast__bar" style="animation-duration:${duration}ms"></div>
   `;
-  host.append(toast);
+  host.appendChild(toast);
+
+  // Use show() (not showModal()) to enter top layer without blocking
+  if (!host.open) {
+    host.show();
+  }
+
   requestAnimationFrame(() => {
     toast.classList.add("is-visible");
   });
+
   setTimeout(() => {
     toast.classList.remove("is-visible");
-    setTimeout(() => toast.remove(), 220);
+    setTimeout(() => {
+      toast.remove();
+      if (host.children.length === 0 && host.close) {
+        host.close();
+      }
+    }, 220);
   }, duration);
+
   return toast;
 }
