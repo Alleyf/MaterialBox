@@ -750,12 +750,18 @@ function renderPreview(item) {
       <h3>${t(state.language, "imageStudio")}</h3>
       <p>${t(state.language, "previewToolsCopy")}</p>
       <div class="studio-form">
-        <div class="studio-preview-card">
-          <span class="studio-preview-label">${t(state.language, "cropEditor")}</span>
-          <div id="image-editor-stage" class="image-editor-stage">
-            <img id="image-editor-image" src="${previewUrl}" alt="" />
+        <div class="studio-preview-split">
+          <div class="studio-preview-card studio-preview-original">
+            <span class="studio-preview-label">${t(state.language, "cropEditor")}</span>
+            <div id="image-editor-stage" class="image-editor-stage">
+              <img id="image-editor-image" src="${previewUrl}" alt="" />
+            </div>
+            <span class="studio-note">${t(state.language, "dragCropHint")}</span>
           </div>
-          <span class="studio-note">${t(state.language, "dragCropHint")}</span>
+          <div class="studio-preview-card studio-preview-processed">
+            <span class="studio-preview-label">${t(state.language, "processedPreview")}</span>
+            <img id="image-preview-result" alt="" />
+          </div>
         </div>
         <label>
           ${t(state.language, "cropPreset")}
@@ -786,10 +792,6 @@ function renderPreview(item) {
           ${t(state.language, "zoomLabel")}
           <input id="image-zoom" type="range" min="1" max="4" step="0.01" value="1" />
         </label>
-        <div class="studio-preview-card">
-          <span class="studio-preview-label">${t(state.language, "processedPreview")}</span>
-          <img id="image-preview-result" alt="" />
-        </div>
         <div class="studio-actions">
           <button id="image-export-btn" class="primary">${t(state.language, "exportDerived")}</button>
           <button id="image-save-btn" class="ghost">${t(state.language, "saveDerived")}</button>
@@ -1833,7 +1835,8 @@ function renderStoragePanel() {
   
   dialog.showModal();
 }
-async function showCollectionPickerDialog(mediaIds, previewDialog) {
+
+async function showCollectionPickerDialog(mediaIds, previewDialog) {
   const collectionPicker = document.getElementById("collection-picker-dialog");
   const collectionPickerList = document.getElementById("collection-picker-list");
   

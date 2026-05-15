@@ -629,8 +629,8 @@ body {
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 100px));
+  gap: 10px;
   padding: 4px;
   width: 100%;
   min-height: 200px;
@@ -639,8 +639,9 @@ body {
 }
 
 #grid {
-  display: block;
-  }
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 100px));
+}
 
 #grid:empty {
   display: none;
@@ -648,13 +649,14 @@ body {
 
 .card {
   overflow: hidden;
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-lg);
   border: 1px solid var(--border-default);
   background: var(--bg-glass);
   backdrop-filter: blur(20px);
   transition: all var(--transition-base);
   animation: cardAppear 0.3s ease forwards;
   opacity: 0;
+  max-width: 100px;
 }
 
 @keyframes cardAppear {
@@ -698,13 +700,13 @@ body {
 
 .badge {
   position: absolute;
-  left: 12px;
-  top: 12px;
-  padding: 4px 10px;
+  left: 8px;
+  top: 8px;
+  padding: 2px 6px;
   background: rgba(9, 9, 11, 0.85);
   backdrop-filter: blur(10px);
   border-radius: var(--radius-full);
-  font-size: 11px;
+  font-size: 9px;
   font-weight: 600;
   color: var(--text-primary);
   border: 1px solid var(--border-default);
@@ -712,22 +714,22 @@ body {
 
 .card-select {
   position: absolute;
-  right: 12px;
-  top: 12px;
-  width: 24px;
-  height: 24px;
+  right: 8px;
+  top: 8px;
+  width: 18px;
+  height: 18px;
   accent-color: var(--accent-emerald);
   cursor: pointer;
 }
 
 .thumb-actions {
   position: absolute;
-  left: 12px;
-  right: 12px;
-  bottom: 12px;
+  left: 6px;
+  right: 6px;
+  bottom: 6px;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  gap: 4px;
   opacity: 0;
   transform: translateY(10px);
   transition: all var(--transition-fast);
@@ -739,20 +741,20 @@ body {
 }
 
 .thumb-action {
-  padding: 10px;
+  padding: 6px;
   background: rgba(9, 9, 11, 0.9);
   backdrop-filter: blur(10px);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
   color: var(--text-primary);
-  font-size: 11px;
+  font-size: 9px;
   font-weight: 500;
   cursor: pointer;
   transition: all var(--transition-fast);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 2px;
 }
 
 .thumb-action:hover {
@@ -766,7 +768,7 @@ body {
 }
 
 .card-body {
-  padding: 10px;
+  padding: 6px;
 }
 
 .card-topline {
@@ -778,11 +780,11 @@ body {
 }
 
 .type-badge {
-  padding: 3px 8px;
+  padding: 2px 5px;
   background: var(--accent-blue-bg);
   color: var(--accent-blue-light);
   border-radius: var(--radius-full);
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 600;
   text-transform: uppercase;
 }
@@ -793,7 +795,7 @@ body {
 }
 
 .card-title {
-  font-size: 14px;
+  font-size: 11px;
   font-weight: 600;
   line-height: 1.4;
   color: var(--text-primary);
@@ -810,9 +812,9 @@ body {
 }
 
 .card-meta {
-  font-size: 11px;
+  font-size: 9px;
   color: var(--text-muted);
-  margin-top: 6px;
+  margin-top: 4px;
   line-height: 1.4;
 }
 
@@ -829,8 +831,8 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 12px;
-  padding-top: 12px;
+  margin-top: 6px;
+  padding-top: 6px;
   border-top: 1px solid var(--border-subtle);
 }
 
@@ -840,8 +842,8 @@ body {
 }
 
 .card-actions .btn-icon {
-  width: 32px;
-  height: 32px;
+  width: 24px;
+  height: 24px;
 }
 
 .empty {
@@ -1641,10 +1643,51 @@ body {
   gap: 10px;
 }
 
+.studio-form .ghost {
+  padding: 10px 16px;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all var(--transition-fast);
+}
+
+.studio-form .ghost:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.studio-preview-split {
+  display: flex;
+  gap: 12px;
+  align-items: stretch;
+  min-height: 300px;
+}
+
+.studio-preview-original {
+  flex: 1;
+  min-width: 0;
+  min-height: 300px;
+}
+
+.studio-preview-processed {
+  flex: 0 0 220px;
+  max-width: 220px;
+  min-height: 300px;
+}
+
 .studio-preview-card {
   padding: 12px;
   background: var(--bg-primary);
   border-radius: var(--radius-md);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .studio-preview-label {
@@ -1702,21 +1745,21 @@ body {
 .image-editor-stage {
   position: relative;
   width: 100%;
-  aspect-ratio: 16/9;
+  min-height: 200px;
   background: var(--bg-primary);
   border-radius: var(--radius-md);
   overflow: hidden;
   cursor: grab;
 }
 
-.image-editor-stage.is-dragging {
-  cursor: grabbing;
-}
-
 .image-editor-stage img {
   position: absolute;
   object-fit: contain;
   pointer-events: none;
+}
+
+.image-editor-stage.is-dragging {
+  cursor: grabbing;
 }
 
 .trim-bar {
@@ -1738,7 +1781,7 @@ body {
 
 #image-preview-result {
   width: 100%;
-  max-height: 150px;
+  max-height: 180px;
   object-fit: contain;
   border-radius: var(--radius-sm);
   margin-top: 8px;

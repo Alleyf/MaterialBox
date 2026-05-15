@@ -74,7 +74,14 @@ jobs:
         run: |
           TAG_VERSION=${GITHUB_REF#refs/tags/v}
           echo "Extracting changelog for version: $TAG_VERSION"
-          
+
+          # Check if CHANGELOG.md exists
+          if [ ! -f CHANGELOG.md ]; then
+            echo "CHANGELOG.md not found, using default message" > release_notes.md
+            echo "changelog_file=release_notes.md" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
           # Extract the section for this version from CHANGELOG.md
           CHANGELOG_CONTENT=$(awk -v version="v$TAG_VERSION" '
             /^## \[v/ {
@@ -87,9 +94,13 @@ jobs:
             section_found && /^## \[v/ { exit }
             section_found { print }
           ' CHANGELOG.md)
-          
-          # Save to a temporary file
-          echo "$CHANGELOG_CONTENT" > release_notes.md
+
+          # If no content found, use default message
+          if [ -z "$CHANGELOG_CONTENT" ]; then
+            echo "Release $TAG_VERSION" > release_notes.md
+          else
+            echo "$CHANGELOG_CONTENT" > release_notes.md
+          fi
           echo "changelog_file=release_notes.md" >> $GITHUB_OUTPUT
 
       - name: Create Release
