@@ -28,7 +28,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Release workflow 修复：处理 CHANGELOG.md 不存在或内容为空的情况
 - 修复了若干 UI 交互细节和状态管理问题
 
-## [v0.1.0] - 2024-01-01
+## [v1.2.0] - 2026-05-16
+
+### Added
+- **AI 提示词管理**：新增提示词管理功能，支持复制、编辑和组织 AI 生成提示词
+- **多语言支持**：为添加到收藏夹功能添加完整的国际化支持
+
+### Changed
+- **图片剪辑预览布局优化**：改进 Material Studio 图片工作室的预览显示
+- **文档完善**：更新 README 文档，增加功能截图和详细说明
+
+### Fixed
+- **Firefox 合规性**：添加 data_collection_permissions 以符合 Firefox 扩展规范
+- **Release Workflow**：修复 changelog 提取脚本，确保 Release 页面正确显示更新日志
+
+## [v1.1.0] - 2024-01-15
+
+### Added
+- 高级筛选系统
+- 标签系统
+- 智能分类 (Smart Collections)
+
+## [v1.0.2] - 2024-01-10
+
+### Fixed
+- 修复已知问题
+
+## [v1.0.1] - 2024-01-05
+
+### Changed
+- 版本更新
+
+## [v1.0.0] - 2024-01-01
 
 ### Added
 - 初始版本发布
