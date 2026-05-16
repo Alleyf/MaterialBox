@@ -1,5 +1,6 @@
 import { putPrompt, getPrompt, getAllPrompts, deletePrompt, updatePrompt } from "../../lib/db.js";
 import { ok, fail as error } from "../response.js";
+import { extensionApi } from "../../lib/utils.js";
 
 export async function handleSavePrompt({ message }) {
   try {
@@ -62,6 +63,52 @@ export async function handleUpdatePrompt({ message }) {
     }
     const updated = await updatePrompt(id, updates);
     return ok({ prompt: updated });
+  } catch (err) {
+    return error(err.message);
+  }
+}
+
+export async function handleSavePromptFromClipboard({ message }) {
+  try {
+    const { tabId } = message;
+
+    // Read from clipboard
+    let content;
+    try {
+      content = await extensionApi.tabs.sendMessage(tabId, { type: "READ_CLIPBOARD_TEXT" });
+      if (!content || !content.text) {
+        return error("Clipboard is empty");
+      }
+      content = content.text;
+    } catch (err) {
+      return error("Cannot read clipboard: " + err.message);
+    }
+
+    // Get current tab info
+    let pageUrl = "";
+    let pageTitle = "";
+    if (tabId) {
+      try {
+        const tab = await extensionApi.tabs.get(tabId);
+        pageUrl = tab?.url ?? "";
+        pageTitle = tab?.title ?? "";
+      } catch {
+        // Ignore
+      }
+    }
+
+    const prompt = {
+      id: crypto.randomUUID(),
+      title: content.slice(0, 30) || "Untitled",
+      content: content,
+      sourceUrl: pageUrl,
+      tags: [],
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+
+    const saved = await putPrompt(prompt);
+    return ok({ prompt: saved });
   } catch (err) {
     return error(err.message);
   }

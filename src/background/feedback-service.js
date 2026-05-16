@@ -3,15 +3,16 @@ import { getLanguage, t } from "../lib/i18n.js";
 
 export async function showSaveToast(tabId, payload) {
   if (!tabId) {
-    return;
+    return false;
   }
   try {
     await extensionApi.tabs.sendMessage(tabId, {
       type: "SHOW_SAVE_TOAST",
       payload
     });
+    return true;
   } catch {
-    return;
+    return false;
   }
 }
 
@@ -68,15 +69,17 @@ export function isZh() {
 export async function notifySaveResult(saved, tabId) {
   const zh = isZh();
   const category = saved.category;
+  const toastMessage = saved.deduped
+    ? (zh ? `素材已存在于资源库 · ${category}` : `Already in library · ${category}`)
+    : (zh ? `已保存到资源库 · ${category}` : `Saved to library · ${category}`);
 
-  await showSaveToast(tabId, {
+  const toastShown = await showSaveToast(tabId, {
     title: "MaterialBox",
-    message: saved.deduped
-      ? (zh ? `素材已存在于资源库 · ${category}` : `Already in library · ${category}`)
-      : (zh ? `已保存到资源库 · ${category}` : `Saved to library · ${category}`),
+    message: toastMessage,
     tone: "success"
   });
 
+  // Always show system notification as backup
   await notify(
     saved.deduped
       ? (zh ? "检测到重复素材，已跳过保存" : "Duplicate detected, skipped saving")
@@ -92,4 +95,25 @@ export async function notifySaveError(tabId, error) {
     tone: "error"
   });
   await notify(zh ? "素材保存失败" : "Save failed");
+}
+
+export async function notifySaveFiltered(tabId) {
+  const zh = isZh();
+  const message = zh ? "图片分辨率太低，已跳过" : "Image resolution too low, skipped";
+  await showSaveToast(tabId, {
+    title: "MaterialBox",
+    message,
+    tone: "info"
+  });
+  await notify(message);
+}
+
+export async function notifySaveDuplicate(tabId) {
+  const zh = isZh();
+  await showSaveToast(tabId, {
+    title: "MaterialBox",
+    message: zh ? "素材已存在于资源库" : "Already in library",
+    tone: "info"
+  });
+  await notify(zh ? "检测到重复素材，已跳过保存" : "Duplicate detected, skipped saving");
 }

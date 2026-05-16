@@ -1,4 +1,4 @@
-import { getAllMedia, getRulesSummary, getAiStatus } from "../media-service.js";
+import { getAllMedia, getRulesSummary, getAiStatus, getFilterConfig, updateFilterConfig } from "../media-service.js";
 
 export async function handleGetStats() {
   const items = await getAllMedia();
@@ -24,4 +24,15 @@ export async function handleGetAiStatus() {
   } catch (error) {
     return { ok: false, error: error.message };
   }
+}
+
+export async function handleGetFilterConfig() {
+  const config = await getFilterConfig();
+  return { ok: true, config };
+}
+
+export async function handleUpdateFilterConfig({ message }) {
+  const { updates } = message;
+  const config = await updateFilterConfig(updates);
+  return { ok: true, config };
 }

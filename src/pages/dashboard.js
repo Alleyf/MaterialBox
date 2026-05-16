@@ -20,6 +20,14 @@ const state = {
   exportDirectoryHandle: null,
   exportDirectoryName: "",
   syncSettings: createDefaultSyncSettings(),
+  filterConfig: {
+    minWidth: 80,
+    minHeight: 60,
+    minArea: 5000,
+    minRatio: 0.22,
+    maxRatio: 4.8,
+    minFileSize: 10240
+  },
   focusedIndex: -1,
   commandPaletteOpen: false,
   history: createHistoryManager(),
@@ -552,6 +560,11 @@ if (syncWebdavOpt) syncWebdavOpt.textContent = t(state.language, "syncWebdav");
   safeSet("sync-test-btn", t(state.language, "syncTest"));
   safeSet("sync-upload-btn", t(state.language, "syncUpload"));
   safeSet("sync-download-btn", t(state.language, "syncDownload"));
+  safeSet("filter-save-btn", t(state.language, "save") || "Save");
+  safeSet("filter-threshold-title", state.language === "zh" ? "分辨率阈值" : "Resolution Threshold");
+  safeSet("filter-min-width-label", state.language === "zh" ? "最小宽度" : "Min Width");
+  safeSet("filter-min-height-label", state.language === "zh" ? "最小高度" : "Min Height");
+  safeSet("filter-min-area-label", state.language === "zh" ? "最小面积" : "Min Area");
   safeSet("studio-panel-title", t(state.language, "studioPanel"));
   safeSet("studio-panel-copy", t(state.language, "studioPanelCopy"));
   safeSet("studio-panel-hint", t(state.language, "studioPanelHint"));
@@ -612,6 +625,36 @@ function renderSyncSettings() {
   document.getElementById("sync-webdav-path").value = webdav.path ?? "";
   document.getElementById("sync-s3-fields").hidden = provider !== "s3";
   document.getElementById("sync-webdav-fields").hidden = provider !== "webdav";
+}
+
+function renderFilterConfig() {
+  const config = state.filterConfig;
+  document.getElementById("filter-min-width").value = config.minWidth ?? 80;
+  document.getElementById("filter-min-height").value = config.minHeight ?? 60;
+  document.getElementById("filter-min-area").value = config.minArea ?? 5000;
+}
+
+function readFilterConfigFromForm() {
+  return {
+    minWidth: parseInt(document.getElementById("filter-min-width").value, 10) || 80,
+    minHeight: parseInt(document.getElementById("filter-min-height").value, 10) || 60,
+    minArea: parseInt(document.getElementById("filter-min-area").value, 10) || 5000,
+    minRatio: 0.22,
+    maxRatio: 4.8,
+    minFileSize: 10240
+  };
+}
+
+async function saveFilterConfig() {
+  state.filterConfig = readFilterConfigFromForm();
+  await putMeta("filterConfig", state.filterConfig);
+  renderFilterConfig();
+  showToast({
+    document,
+    title: "MaterialBox",
+    message: t(state.language, "settingsSaved") || "Settings saved",
+    tone: "success"
+  });
 }
 
 function renderCategoryChips() {
@@ -1752,8 +1795,6 @@ function renderGrid() {
   empty.hidden = true;
   grid.innerHTML = "";
 
-  const lazyLoader = createLazyLoader();
-
   for (let index = 0; index < visibleItems.length; index++) {
     const item = visibleItems[index];
     const previewUrl = createPreviewUrl(item);
@@ -2363,13 +2404,14 @@ async function createNewTag() {
 }
 
 async function loadData() {
-  const [items, rulesSummary, aiStatus, exportDirectoryHandle, exportDirectoryName, cloudSyncSettings, tags, collections, promptsResult] = await Promise.all([
+  const [items, rulesSummary, aiStatus, exportDirectoryHandle, exportDirectoryName, cloudSyncSettings, filterConfig, tags, collections, promptsResult] = await Promise.all([
     getAllMedia(),
     extensionApi.runtime.sendMessage({ type: "GET_RULES_SUMMARY" }),
     extensionApi.runtime.sendMessage({ type: "GET_AI_STATUS" }).catch(() => ({ ok: false })),
     getMeta("exportDirectoryHandle", null),
     getMeta("exportDirectoryName", ""),
     getMeta("cloudSyncSettings", createDefaultSyncSettings()),
+    getMeta("filterConfig", { minWidth: 80, minHeight: 60, minArea: 5000, minRatio: 0.22, maxRatio: 4.8, minFileSize: 10240 }),
     getTags(state.language),
     getCollections(),
     extensionApi.runtime.sendMessage({ type: "GET_PROMPTS" }).catch(() => ({ ok: false, prompts: [] }))
@@ -2380,11 +2422,13 @@ async function loadData() {
   state.exportDirectoryHandle = exportDirectoryHandle;
   state.exportDirectoryName = exportDirectoryName;
   state.syncSettings = mergeSyncSettings(cloudSyncSettings);
+  state.filterConfig = filterConfig ?? { minWidth: 80, minHeight: 60, minArea: 5000, minRatio: 0.22, maxRatio: 4.8, minFileSize: 10240 };
   state.tags = tags;
   state.collections = collections;
   state.prompts = promptsResult.ok ? promptsResult.prompts : [];
   renderFilters();
   renderSyncSettings();
+  renderFilterConfig();
   renderGrid();
   renderDirectorySummary();
   renderTagChips();
@@ -2663,6 +2707,14 @@ async function bindEvents() {
   document.getElementById("sync-save-btn").addEventListener("click", async () => {
     try {
       await saveSyncSettings();
+    } catch (error) {
+      showDashboardToast(error.message || t(state.language, "saveFailed"), "error", 3200);
+    }
+  });
+
+  document.getElementById("filter-save-btn").addEventListener("click", async () => {
+    try {
+      await saveFilterConfig();
     } catch (error) {
       showDashboardToast(error.message || t(state.language, "saveFailed"), "error", 3200);
     }

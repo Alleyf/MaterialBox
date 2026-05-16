@@ -524,6 +524,33 @@
           </button>
         </header>
         <div class="form-grid">
+          <div class="form-group section-title">
+            <span class="form-label" id="filter-threshold-title">分辨率阈值</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label" id="filter-min-width-label">最小宽度</label>
+            <input id="filter-min-width" type="number" class="form-input filter-number" min="0" value="80" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" id="filter-min-height-label">最小高度</label>
+            <input id="filter-min-height" type="number" class="form-input filter-number" min="0" value="60" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" id="filter-min-area-label">最小面积</label>
+            <input id="filter-min-area" type="number" class="form-input filter-number" min="0" value="5000" />
+          </div>
+          <div class="form-actions">
+            <button id="filter-save-btn" class="btn btn-secondary">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                <polyline points="7 3 7 8 15 8"></polyline>
+              </svg>
+              <span></span>
+            </button>
+          </div>
+        </div>
+        <div class="form-grid">
           <div class="form-group">
             <label class="form-label" id="sync-provider-label"></label>
             <select id="sync-provider-select" class="filter-select">

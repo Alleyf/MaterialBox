@@ -14,6 +14,15 @@ import { blobToDataUrl, computeContentHash } from "./utils.js";
 
 const MODEL_PATH = "src/models/mobilenet-v2-050/model.json";
 
+const DEFAULT_FILTER_CONFIG = {
+  minWidth: 80,
+  minHeight: 60,
+  minArea: 5000,
+  minRatio: 0.22,
+  maxRatio: 4.8,
+  minFileSize: 10_240
+};
+
 async function classifyWithVision(media) {
   if (media.type !== "image") {
     return null;
@@ -61,22 +70,24 @@ function looksLikeGarbageUrl(sourceUrl = "") {
   return /(sprite|spacer|blank|pixel|tracker|beacon|emoji|avatar|favicon|badge|placeholder)/i.test(sourceUrl);
 }
 
-function isUsefulFetchedMedia(payload, blob) {
+async function isUsefulFetchedMedia(payload, blob) {
+  const config = await getFilterConfig();
+
   if (payload.type === "image") {
-    if ((payload.width ?? 0) < 120 || (payload.height ?? 0) < 90) {
+    if ((payload.width ?? 0) < config.minWidth || (payload.height ?? 0) < config.minHeight) {
       return false;
     }
-    if ((payload.width ?? 0) * (payload.height ?? 0) < 18000) {
+    if ((payload.width ?? 0) * (payload.height ?? 0) < config.minArea) {
       return false;
     }
     const ratio = (payload.width ?? 1) / Math.max(payload.height ?? 1, 1);
-    if (ratio > 4.8 || ratio < 0.22) {
+    if (ratio > config.maxRatio || ratio < config.minRatio) {
       return false;
     }
     if (looksLikeGarbageUrl(payload.sourceUrl) && (payload.width ?? 0) <= 320 && (payload.height ?? 0) <= 320) {
       return false;
     }
-    if (blob.size < 10_240 && !payload.mimeType?.includes("svg") && !blob.type.includes("svg")) {
+    if (blob.size < config.minFileSize && !payload.mimeType?.includes("svg") && !blob.type.includes("svg")) {
       return false;
     }
   }
@@ -99,7 +110,7 @@ async function getRules() {
 
 export async function saveFromSource(payload) {
   const blob = payload.blob ?? await fetchAsBlob(payload.sourceUrl);
-  if (!isUsefulFetchedMedia(payload, blob)) {
+  if (!await isUsefulFetchedMedia(payload, blob)) {
     return { saved: false, filtered: true, item: null };
   }
 
@@ -260,4 +271,16 @@ export async function getAiStatus() {
   } catch (error) {
     throw new Error(error.message);
   }
+}
+
+export async function getFilterConfig() {
+  const config = await getMeta("filterConfig", DEFAULT_FILTER_CONFIG);
+  return config ?? DEFAULT_FILTER_CONFIG;
+}
+
+export async function updateFilterConfig(updates) {
+  const current = await getFilterConfig();
+  const updated = { ...current, ...updates };
+  await putMeta("filterConfig", updated);
+  return updated;
 }
