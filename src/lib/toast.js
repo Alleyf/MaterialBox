@@ -12,114 +12,90 @@ function ensureToastStyles(doc) {
       position: fixed !important;
       top: 24px !important;
       right: 24px !important;
-      display: grid;
-      gap: 12px;
-      pointer-events: none;
-      z-index: 2147483647;
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 8px !important;
+      pointer-events: none !important;
+      z-index: 2147483647 !important;
+      background: transparent !important;
+      border: none !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      max-width: 320px !important;
     }
 
     .materialbox-toast {
-      min-width: 264px;
-      max-width: min(360px, calc(100vw - 32px));
-      padding: 14px 16px;
-      border-radius: 20px;
+      padding: 12px 16px;
+      border-radius: 12px;
       border: 1px solid rgba(255, 255, 255, 0.1);
       background: linear-gradient(180deg, rgba(18, 24, 34, 0.96), rgba(10, 14, 22, 0.96));
-      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.32);
-      backdrop-filter: blur(18px);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.24);
       color: #f4f7fb;
-      font: 13px/1.45 "Aptos", "Segoe UI", "PingFang SC", sans-serif;
-      transform: translateY(-8px) scale(0.98);
+      font: 13px/1.4 "Segoe UI", "PingFang SC", sans-serif;
       opacity: 0;
-      transition: opacity 180ms ease, transform 180ms ease;
+      transform: translateY(-8px);
+      transition: opacity 200ms ease, transform 200ms ease;
       overflow: hidden;
+      pointer-events: auto;
+      word-break: break-word;
     }
 
     .materialbox-toast.is-visible {
       opacity: 1;
-      transform: translateY(0) scale(1);
+      transform: translateY(0);
     }
 
     .materialbox-toast__row {
       display: flex;
-      gap: 12px;
+      gap: 10px;
       align-items: flex-start;
     }
 
     .materialbox-toast__dot {
-      width: 12px;
-      height: 12px;
-      border-radius: 999px;
-      margin-top: 4px;
-      flex: 0 0 auto;
-      box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.04);
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-top: 5px;
+      flex-shrink: 0;
     }
 
     .materialbox-toast__dot[data-tone="success"] {
-      background: #8df0cf;
-      box-shadow: 0 0 0 6px rgba(141, 240, 207, 0.08);
+      background: #4ade80;
     }
 
     .materialbox-toast__dot[data-tone="error"] {
-      background: #ff9a9a;
-      box-shadow: 0 0 0 6px rgba(255, 154, 154, 0.08);
+      background: #f87171;
     }
 
     .materialbox-toast__dot[data-tone="info"] {
-      background: #8dbfff;
-      box-shadow: 0 0 0 6px rgba(141, 191, 255, 0.08);
+      background: #60a5fa;
+    }
+
+    .materialbox-toast__content {
+      flex: 1;
+      min-width: 0;
     }
 
     .materialbox-toast__title {
-      font-weight: 700;
-      margin-bottom: 4px;
+      font-weight: 600;
+      margin-bottom: 2px;
     }
 
     .materialbox-toast__message {
-      color: #b9c5d4;
+      color: #cbd5e1;
+      font-size: 12px;
     }
 
-    .materialbox-toast__bar {
-      height: 2px;
-      margin: 12px -16px -14px;
-      background: linear-gradient(90deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0));
-      transform-origin: left;
-      animation: materialbox-toast-bar linear forwards;
-    }
-
-    @keyframes materialbox-toast-bar {
-      from { transform: scaleX(1); }
-      to { transform: scaleX(0); }
-    }
-
-    @media (max-width: 720px) {
+    @media (max-width: 480px) {
       .materialbox-toast-host {
-        top: 16px !important;
-        right: 16px !important;
-        left: 16px !important;
-      }
-
-      .materialbox-toast {
-        min-width: 0;
-        max-width: 100%;
+        top: 12px !important;
+        right: 12px !important;
+        left: 12px !important;
+        max-width: none !important;
       }
     }
   `;
   doc.head?.append(style) ?? doc.documentElement.append(style);
-}
-
-function ensureToastHost(doc) {
-  ensureToastStyles(doc);
-  let host = doc.querySelector(".materialbox-toast-host");
-  if (host) {
-    return host;
-  }
-  // Use dialog element so toast enters top layer (above showModal dialogs)
-  const dialog = doc.createElement("dialog");
-  dialog.className = "materialbox-toast-host";
-  dialog.style.cssText = "position:fixed;top:24px;right:24px;background:transparent;border:none;pointer-events:none;margin:0;padding:0;";
-  doc.documentElement.appendChild(dialog);
-  return dialog;
 }
 
 export function showToast({
@@ -129,37 +105,47 @@ export function showToast({
   tone = "success",
   duration = 2800
 }) {
-  const host = ensureToastHost(doc);
+  ensureToastStyles(doc);
+
+  // Remove any existing toast elements
+  const existingHost = doc.querySelector(".materialbox-toast-host");
+  if (existingHost) {
+    existingHost.remove();
+  }
+
+  // Create a simple div - no dialog element to avoid blocking
+  const host = doc.createElement("div");
+  host.className = "materialbox-toast-host";
+  host.style.cssText = "position:fixed;top:24px;right:24px;display:flex;flex-direction:column;gap:8px;pointer-events:none;z-index:2147483647;max-width:320px;";
+  doc.body?.appendChild(host);
+
+  // Create individual toast
   const toast = doc.createElement("div");
   toast.className = "materialbox-toast";
   toast.innerHTML = `
     <div class="materialbox-toast__row">
       <div class="materialbox-toast__dot" data-tone="${tone}"></div>
-      <div>
+      <div class="materialbox-toast__content">
         <div class="materialbox-toast__title">${title}</div>
         <div class="materialbox-toast__message">${message}</div>
       </div>
     </div>
-    <div class="materialbox-toast__bar" style="animation-duration:${duration}ms"></div>
   `;
   host.appendChild(toast);
 
-  // Use show() (not showModal()) to enter top layer without blocking
-  if (!host.open) {
-    host.show();
-  }
-
+  // Trigger visibility animation
   requestAnimationFrame(() => {
-    toast.classList.add("is-visible");
+    requestAnimationFrame(() => {
+      toast.classList.add("is-visible");
+    });
   });
 
+  // Remove toast after duration
   setTimeout(() => {
     toast.classList.remove("is-visible");
     setTimeout(() => {
       toast.remove();
-      if (host.children.length === 0 && host.close) {
-        host.close();
-      }
+      host.remove();
     }, 220);
   }, duration);
 

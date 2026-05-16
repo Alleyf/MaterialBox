@@ -854,6 +854,76 @@ function showPromptPreview(promptId) {
   dialog.showModal();
 }
 
+// Prompt editor undo/redo state
+const promptEditorHistory = {
+  stack: [],
+  index: -1,
+  maxSize: 50,
+  isRestoring: false
+};
+
+function initPromptEditorHistory(initialContent = "") {
+  promptEditorHistory.stack = [initialContent];
+  promptEditorHistory.index = 0;
+}
+
+function savePromptEditorState(content) {
+  if (promptEditorHistory.isRestoring) return;
+  // Skip if content is the same as current state
+  if (promptEditorHistory.index >= 0 && promptEditorHistory.stack[promptEditorHistory.index] === content) {
+    return;
+  }
+  // Remove any redo states
+  promptEditorHistory.stack = promptEditorHistory.stack.slice(0, promptEditorHistory.index + 1);
+  // Add new state
+  promptEditorHistory.stack.push(content);
+  // Limit stack size
+  if (promptEditorHistory.stack.length > promptEditorHistory.maxSize) {
+    promptEditorHistory.stack.shift();
+  } else {
+    promptEditorHistory.index++;
+  }
+}
+
+function undoPromptEditor() {
+  if (promptEditorHistory.index <= 0) return false;
+  promptEditorHistory.isRestoring = true;
+  promptEditorHistory.index--;
+  const content = promptEditorHistory.stack[promptEditorHistory.index];
+  const contentInput = document.getElementById("prompt-content-input");
+  if (contentInput) {
+    contentInput.innerHTML = content;
+    // Move cursor to end
+    const range = document.createRange();
+    const sel = window.getSelection();
+    range.selectNodeContents(contentInput);
+    range.collapse(false);
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+  promptEditorHistory.isRestoring = false;
+  return true;
+}
+
+function redoPromptEditor() {
+  if (promptEditorHistory.index >= promptEditorHistory.stack.length - 1) return false;
+  promptEditorHistory.isRestoring = true;
+  promptEditorHistory.index++;
+  const content = promptEditorHistory.stack[promptEditorHistory.index];
+  const contentInput = document.getElementById("prompt-content-input");
+  if (contentInput) {
+    contentInput.innerHTML = content;
+    const range = document.createRange();
+    const sel = window.getSelection();
+    range.selectNodeContents(contentInput);
+    range.collapse(false);
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+  promptEditorHistory.isRestoring = false;
+  return true;
+}
+
 function showPromptDialog(prompt = null) {
   const dialog = document.getElementById("prompt-dialog");
   const titleEl = document.getElementById("prompt-dialog-title");
@@ -864,10 +934,14 @@ function showPromptDialog(prompt = null) {
   const saveText = document.querySelector("#prompt-save-btn span");
   const cancelText = document.querySelector("#prompt-cancel-btn span");
 
+  const initialContent = prompt?.content || "";
+
   // Reset preview state
   if (contentInput) {
-    contentInput.innerHTML = prompt?.content || "";
+    contentInput.innerHTML = initialContent;
     contentInput.hidden = false;
+    // Initialize undo/redo history
+    initPromptEditorHistory(initialContent);
   }
   if (contentPreview) {
     contentPreview.hidden = true;
@@ -1000,7 +1074,6 @@ function renderPreview(item) {
             <p class="studio-note">${t(state.language, "dragCropHint")}</p>
           </div>
           <div class="studio-preview-bar">
-            <span class="studio-preview-label">${t(state.language, "processedPreview")}</span>
             <img id="image-preview-result" alt="" />
             <span id="crop-info" class="studio-preview-label" style="margin-left:auto;"></span>
           </div>
@@ -2864,12 +2937,40 @@ async function bindEvents() {
   // Prompt editor toolbar events
   document.querySelectorAll(".prompt-editor-btn[data-command]").forEach(btn => {
     btn.addEventListener("click", () => {
-      const command = btn.dataset.command;
-      document.execCommand(command, false, null);
       const contentInput = document.getElementById("prompt-content-input");
-      contentInput?.focus();
+      if (contentInput) {
+        // Save state before making changes
+        savePromptEditorState(contentInput.innerHTML);
+        const command = btn.dataset.command;
+        document.execCommand(command, false, null);
+        contentInput.focus();
+      }
     });
   });
+
+  // Prompt editor keyboard shortcuts (undo/redo)
+  const contentInput = document.getElementById("prompt-content-input");
+  if (contentInput) {
+    contentInput.addEventListener("keydown", (e) => {
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === "z" && !e.shiftKey) {
+          e.preventDefault();
+          if (!undoPromptEditor()) {
+            showDashboardToast(t(state.language, "noUndoAvailable"), "info", 2000);
+          }
+        } else if ((e.key === "z" && e.shiftKey) || e.key === "y") {
+          e.preventDefault();
+          if (!redoPromptEditor()) {
+            showDashboardToast(t(state.language, "noRedoAvailable"), "info", 2000);
+          }
+        }
+      }
+    });
+    // Save state on input changes
+    contentInput.addEventListener("input", () => {
+      savePromptEditorState(contentInput.innerHTML);
+    });
+  }
 
   document.getElementById("prompt-preview-toggle")?.addEventListener("click", () => {
     const contentInput = document.getElementById("prompt-content-input");
