@@ -108,16 +108,16 @@ export function showToast({
   ensureToastStyles(doc);
 
   // Remove any existing toast elements
-  const existingHost = doc.querySelector(".materialbox-toast-host");
-  if (existingHost) {
-    existingHost.remove();
+  const existingToast = doc.querySelector(".materialbox-toast-host");
+  if (existingToast) {
+    existingToast.remove();
   }
 
-  // Create a simple div - no dialog element to avoid blocking
-  const host = doc.createElement("div");
+  // Use dialog element with show() to leverage top layer while staying non-blocking
+  const host = doc.createElement("dialog");
   host.className = "materialbox-toast-host";
-  host.style.cssText = "position:fixed;top:24px;right:24px;display:flex;flex-direction:column;gap:8px;pointer-events:none;z-index:2147483647;max-width:320px;";
-  doc.body?.appendChild(host);
+  host.style.cssText = "position:fixed;top:24px;right:24px;margin:0;padding:0;border:none;background:transparent;pointer-events:none;z-index:2147483647;max-width:320px;";
+  host.noClose = true;
 
   // Create individual toast
   const toast = doc.createElement("div");
@@ -132,6 +132,10 @@ export function showToast({
     </div>
   `;
   host.appendChild(toast);
+  doc.body?.appendChild(host);
+
+  // Show the dialog (non-modal, no backdrop)
+  host.show();
 
   // Trigger visibility animation
   requestAnimationFrame(() => {
@@ -144,7 +148,7 @@ export function showToast({
   setTimeout(() => {
     toast.classList.remove("is-visible");
     setTimeout(() => {
-      toast.remove();
+      host.close();
       host.remove();
     }, 220);
   }, duration);

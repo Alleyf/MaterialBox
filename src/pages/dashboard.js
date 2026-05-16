@@ -851,7 +851,7 @@ function showPromptPreview(promptId) {
   if (editText) editText.textContent = t(state.language, "editPrompt");
   if (deleteText) deleteText.textContent = t(state.language, "deletePrompt");
 
-  dialog.showModal();
+  dialog?.showModal();
 }
 
 // Prompt editor undo/redo state
@@ -953,7 +953,7 @@ function showPromptDialog(prompt = null) {
   if (saveText) saveText.textContent = t(state.language, "save");
   if (cancelText) cancelText.textContent = t(state.language, "cancel");
 
-  dialog.showModal();
+  dialog?.showModal();
 }
 
 async function savePromptFromDialog() {
@@ -1209,8 +1209,8 @@ function renderPreview(item) {
     </div>
   `;
 
-  dialog.showModal();
-  document.getElementById("studio-close-btn").addEventListener("click", () => dialog.close());
+  dialog?.showModal();
+  document.getElementById("studio-close-btn")?.addEventListener("click", () => dialog?.close());
   document.getElementById("manual-category-btn").addEventListener("click", async () => {
     const category = document.getElementById("manual-category-select").value;
     await updateCategory(item.id, category);
@@ -1448,7 +1448,7 @@ function renderPreview(item) {
       await saveDerivedItem(result.blob, item, "edited", result.mimeType, "image");
     });
 
-    dialog.addEventListener("close", () => {
+    dialog?.addEventListener("close", () => {
       clearTimeout(previewTimer);
     }, { once: true });
   }
@@ -1519,7 +1519,7 @@ function renderPreview(item) {
     });
   }
 
-  dialog.addEventListener("close", () => URL.revokeObjectURL(previewUrl), { once: true });
+  dialog?.addEventListener("close", () => URL.revokeObjectURL(previewUrl), { once: true });
 }
 
 async function updateCategory(id, category) {
@@ -2583,20 +2583,15 @@ async function bindEvents() {
   document.querySelectorAll(".tab").forEach((tab) => {
     tab.addEventListener("click", () => {
       state.mediaType = tab.dataset.type;
+      const categoryFilter = document.getElementById("category-filter");
+      const advancedFiltersToggle = document.getElementById("advanced-filters-toggle");
+      // Note: hero-bottom contains the tabs, so we don't hide it
       if (tab.dataset.type === "prompts") {
-        const categoryFilter = document.getElementById("category-filter");
-        const advancedFiltersToggle = document.getElementById("advanced-filters-toggle");
-        const heroBottom = document.querySelector(".hero-bottom");
         if (categoryFilter) categoryFilter.hidden = true;
         if (advancedFiltersToggle) advancedFiltersToggle.hidden = true;
-        if (heroBottom) heroBottom.hidden = true;
       } else {
-        const categoryFilter = document.getElementById("category-filter");
-        const advancedFiltersToggle = document.getElementById("advanced-filters-toggle");
-        const heroBottom = document.querySelector(".hero-bottom");
         if (categoryFilter) categoryFilter.hidden = false;
         if (advancedFiltersToggle) advancedFiltersToggle.hidden = false;
-        if (heroBottom) heroBottom.hidden = false;
       }
       renderFilters();
       renderGrid();
@@ -2861,10 +2856,6 @@ async function bindEvents() {
     document.getElementById("tags-dialog").close();
   });
 
-  document.getElementById("tags-dialog").addEventListener("click", (event) => {
-    if (event.target.nodeName === "DIALOG") {
-      event.target.close();
-
   document.getElementById("tag-picker-close-btn").addEventListener("click", () => {
     document.getElementById("tag-picker-dialog").close();
   });
@@ -2874,6 +2865,10 @@ async function bindEvents() {
       event.target.close();
     }
   });
+
+  document.getElementById("tags-dialog").addEventListener("click", (event) => {
+    if (event.target.nodeName === "DIALOG") {
+      event.target.close();
     }
   });
 
@@ -3010,7 +3005,7 @@ async function bindEvents() {
   });
 
   const commandInput = document.getElementById("command-input");
-  commandInput.addEventListener("input", (event) => {
+  commandInput?.addEventListener("input", (event) => {
     renderCommandResults(event.target.value);
   });
 
